@@ -23,6 +23,10 @@ export function chatCommand(): Command {
         messages: [{ role: "user", content: (messageParts ?? []).join(" ") }],
         stream: options.stream,
       };
+      if (options.stream) {
+        process.stdout.write(await client.postText("/v1/chat/completions", payload));
+        return;
+      }
       printJSON(await client.post("/v1/chat/completions", payload));
     });
 

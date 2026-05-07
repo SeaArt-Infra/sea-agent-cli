@@ -24,6 +24,10 @@ export class AgentGatewayClient {
     return this.requestJSON("POST", this.buildURL(path), body);
   }
 
+  async postText(path: string, body?: unknown): Promise<string> {
+    return this.requestText("POST", this.buildURL(path), body);
+  }
+
   async put(path: string, body?: unknown): Promise<unknown> {
     return this.requestJSON("PUT", this.buildURL(path), body);
   }
@@ -42,8 +46,14 @@ export class AgentGatewayClient {
   }
 
   private async requestJSON(method: Dispatcher.HttpMethod, url: string, body?: unknown): Promise<unknown> {
+    const text = await this.requestText(method, url, body, "application/json");
+    const parsed = parseJSONResponse(text, url);
+    return parsed;
+  }
+
+  private async requestText(method: Dispatcher.HttpMethod, url: string, body?: unknown, accept = "*/*"): Promise<string> {
     const headers: Record<string, string> = {
-      accept: "application/json",
+      accept,
     };
     let payload: string | undefined;
     if (body !== undefined) {
@@ -63,12 +73,17 @@ export class AgentGatewayClient {
       body: payload,
     });
     const text = await response.body.text();
-    const parsed = parseJSONResponse(text, url);
     if (response.statusCode >= 400) {
+      let parsed: unknown;
+      try {
+        parsed = text ? JSON.parse(text) : {};
+      } catch {
+        parsed = {};
+      }
       const message = typeof parsed === "object" && parsed && "error" in parsed ? (parsed as any).error : text;
       throw new Error(`${response.statusCode}: ${message}`);
     }
-    return parsed;
+    return text;
   }
 }
 
