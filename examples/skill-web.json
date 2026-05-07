@@ -1,0 +1,23 @@
+{
+  "id": "web_skill:v1",
+  "name": "web_skill",
+  "version": "v1",
+  "display_name": "Web Skill",
+  "description": "Fetch and process web pages.",
+  "category": "web",
+  "provider": "web-tools-mcp",
+  "required_tools": ["web-tools-mcp:web_fetch:v1"],
+  "optional_tools": [],
+  "instruction": "Use web tools to fetch pages and answer with concise summaries.",
+  "config": {
+    "model": "gpt-4o",
+    "temperature": 0.2
+  },
+  "triggers": {
+    "keywords": ["fetch", "web", "url"]
+  },
+  "tags": ["web"],
+  "enabled": true,
+  "owner_id": "web-tools-mcp",
+  "created_by": "web-tools-mcp"
+}

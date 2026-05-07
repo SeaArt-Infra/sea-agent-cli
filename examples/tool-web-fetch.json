@@ -1,0 +1,26 @@
+{
+  "provider": "web-tools-mcp",
+  "name": "web_fetch",
+  "version": "v1",
+  "description": "Fetch a webpage and return the response body and metadata.",
+  "transport": "http",
+  "endpoint": "http://web-tool-mcp.us-west1.infra.seaart.dev/tools/web_fetch",
+  "method": "POST",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string"
+      },
+      "no_ssl": {
+        "type": "boolean"
+      },
+      "include_headers": {
+        "type": "boolean"
+      }
+    },
+    "required": ["url"]
+  },
+  "tags": [],
+  "enabled": true
+}
