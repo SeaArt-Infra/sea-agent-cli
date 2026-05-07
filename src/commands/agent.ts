@@ -8,10 +8,20 @@ export function agentCommand(): Command {
 
   cmd
     .command("register")
+    .description("Register an agent via /v1/agents/register")
     .requiredOption("-f, --file <path>", "JSON/YAML request file")
     .action(async (options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
       printJSON(await client.post("/v1/agents/register", await readPayload(options.file)));
+    });
+
+  cmd
+    .command("create")
+    .description("Create an agent via /v1/agents")
+    .requiredOption("-f, --file <path>", "JSON/YAML request file")
+    .action(async (options: { file: string }) => {
+      const client = await AgentGatewayClient.fromConfig();
+      printJSON(await client.post("/v1/agents", await readPayload(options.file)));
     });
 
   cmd

@@ -1,0 +1,86 @@
+import { Command } from "commander";
+import { AgentGatewayClient } from "../lib/client.js";
+import { readPayload } from "../lib/files.js";
+import { printJSON, printTable } from "../lib/output.js";
+
+export function toolCommand(): Command {
+  const cmd = new Command("tool").description("Register and inspect tools used by skills");
+
+  cmd
+    .command("register")
+    .requiredOption("-f, --file <path>", "JSON/YAML request file")
+    .action(async (options: { file: string }) => {
+      const client = await AgentGatewayClient.fromConfig();
+      printJSON(await client.post("/v1/tools/register", await readPayload(options.file)));
+    });
+
+  cmd
+    .command("create")
+    .description("Create a tool via /v1/tools")
+    .requiredOption("-f, --file <path>", "JSON/YAML request file")
+    .action(async (options: { file: string }) => {
+      const client = await AgentGatewayClient.fromConfig();
+      printJSON(await client.post("/v1/tools", await readPayload(options.file)));
+    });
+
+  const list = async (options: any) => {
+    const client = await AgentGatewayClient.fromConfig();
+    const response = await client.get("/v1/tools", {
+      search: options.search,
+      status: options.status,
+      source_kind: options.sourceKind,
+      owner_id: options.ownerId,
+      provider: options.provider,
+      category: options.category,
+      limit: options.limit,
+      offset: options.offset,
+    });
+    printTable((response as any).data ?? response);
+  };
+
+  cmd
+    .command("list")
+    .description("List tools")
+    .option("--search <value>")
+    .option("--status <value>")
+    .option("--source-kind <value>")
+    .option("--owner-id <value>")
+    .option("--provider <value>")
+    .option("--category <value>")
+    .option("--limit <number>", "page size", "20")
+    .option("--offset <number>", "page offset", "0")
+    .action(list);
+
+  cmd
+    .command("find")
+    .description("Alias of list with search filters")
+    .option("--search <value>")
+    .option("--status <value>")
+    .option("--source-kind <value>")
+    .option("--owner-id <value>")
+    .option("--provider <value>")
+    .option("--category <value>")
+    .option("--limit <number>", "page size", "20")
+    .option("--offset <number>", "page offset", "0")
+    .action(list);
+
+  cmd.command("get").argument("<tool-id>").action(async (toolID: string) => {
+    const client = await AgentGatewayClient.fromConfig();
+    printJSON(await client.get(`/v1/tools/${encodeURIComponent(toolID)}`));
+  });
+
+  cmd
+    .command("resolve")
+    .argument("<tool-id>")
+    .option("--version <value>")
+    .option("--version-id <value>")
+    .action(async (toolID: string, options) => {
+      const client = await AgentGatewayClient.fromConfig();
+      printJSON(await client.get(`/v1/tools/${encodeURIComponent(toolID)}/resolve`, {
+        version: options.version,
+        version_id: options.versionId,
+      }));
+    });
+
+  return cmd;
+}

@@ -27,13 +27,17 @@ Authorization: Bearer sa-xxxxxxxx
 ## Usage
 
 ```bash
+agentctl tool register -f examples/tool-web-fetch.json
+agentctl tool find --provider web-tools-mcp --status active
+
 agentctl skill register -f examples/skill-web.json
 agentctl skill list --status active
-agentctl skill tool-register -f examples/tool-web-fetch.json
 
 agentctl agent register -f examples/agent-web.json
+agentctl agent create -f examples/agent-create-web.json
 agentctl agent list
 agentctl agent capabilities web_assistant:v1
 
 agentctl chat run web_assistant:v1 "Search recent AI news"
+agentctl chat run --agent-config-file examples/runtime-agent-config.json "Fetch https://example.com"
 ```

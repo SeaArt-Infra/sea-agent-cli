@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { AgentGatewayClient } from "../lib/client.js";
+import { readPayload } from "../lib/files.js";
 import { printJSON } from "../lib/output.js";
 
 export function chatCommand(): Command {
@@ -7,14 +8,19 @@ export function chatCommand(): Command {
 
   cmd
     .command("run")
-    .argument("<agent-id>")
-    .argument("<message...>")
+    .argument("[agent-id]")
+    .argument("[message...]")
+    .option("-f, --agent-config-file <path>", "JSON/YAML runtime agent_config file")
     .option("--no-stream", "disable streaming")
-    .action(async (agentID: string, messageParts: string[], options: { stream: boolean }) => {
+    .action(async (agentID: string | undefined, messageParts: string[] | undefined, options: { agentConfigFile?: string; stream: boolean }) => {
       const client = await AgentGatewayClient.fromConfig();
+      if (!agentID && !options.agentConfigFile) {
+        throw new Error("agent-id or --agent-config-file is required");
+      }
       const payload = {
-        agent_id: agentID,
-        messages: [{ role: "user", content: messageParts.join(" ") }],
+        ...(agentID ? { agent_id: agentID } : {}),
+        ...(options.agentConfigFile ? { agent_config: await readPayload(options.agentConfigFile) } : {}),
+        messages: [{ role: "user", content: (messageParts ?? []).join(" ") }],
         stream: options.stream,
       };
       printJSON(await client.post("/v1/chat/completions", payload));

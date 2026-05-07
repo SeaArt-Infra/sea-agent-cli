@@ -4,6 +4,7 @@ import { agentCommand } from "./commands/agent.js";
 import { chatCommand } from "./commands/chat.js";
 import { configCommand } from "./commands/config.js";
 import { skillCommand } from "./commands/skill.js";
+import { toolCommand } from "./commands/tool.js";
 
 const program = new Command();
 
@@ -12,6 +13,7 @@ program
   .description("CLI for agent-gateway")
   .version("0.1.0")
   .addCommand(configCommand())
+  .addCommand(toolCommand())
   .addCommand(skillCommand())
   .addCommand(agentCommand())
   .addCommand(chatCommand());

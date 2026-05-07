@@ -1,0 +1,24 @@
+{
+  "agent": {
+    "id": "inline_web_agent",
+    "name": "inline_web_agent",
+    "display_name": "Inline Web Agent",
+    "model": "gpt-4o",
+    "temperature": 0.2,
+    "max_turns": 20,
+    "timeout": 600,
+    "system_prompt": "You are a concise web assistant.",
+    "skill_instructions": [
+      {
+        "id": "inline_web_skill:v1",
+        "name": "inline_web_skill",
+        "instruction": "Use the provided tools when web content is needed."
+      }
+    ],
+    "tools": [],
+    "permissions": {
+      "allow_web_access": true
+    },
+    "config": {}
+  }
+}
