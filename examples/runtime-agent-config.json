@@ -15,7 +15,33 @@
         "instruction": "Use the provided tools when web content is needed."
       }
     ],
-    "tools": [],
+    "tools": [
+      {
+        "name": "web_fetch",
+        "type": "http",
+        "description": "Fetch a webpage and return the response body and metadata.",
+        "endpoint": "http://web-tool-mcp.us-west1.infra.seaart.dev/tools/web_fetch",
+        "method": "POST",
+        "response_mode": "json",
+        "poll_interval": 5.0,
+        "poll_timeout": 600.0,
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "no_ssl": {
+              "type": "boolean"
+            },
+            "include_headers": {
+              "type": "boolean"
+            }
+          },
+          "required": ["url"]
+        }
+      }
+    ],
     "permissions": {
       "allow_web_access": true
     },

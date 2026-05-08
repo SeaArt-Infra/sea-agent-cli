@@ -62,6 +62,11 @@ Fields:
   "description": "What the tool does.",
   "endpoint": "https://tool.example.com/invoke",
   "method": "POST",
+  "response_mode": "json",
+  "poll_field": "task_id",
+  "poll_endpoint": "https://tool.example.com/tasks/{{task_id}}",
+  "poll_interval": 5.0,
+  "poll_timeout": 600.0,
   "parameters": {
     "type": "object",
     "properties": {},
@@ -82,6 +87,10 @@ Important rules:
 - `provider` defaults to `internal`; `version` defaults to `v1`; `category` defaults to `general`.
 - `id` defaults to `provider:name:version`.
 - `method` defaults to `POST`; timeout defaults to `10000` ms. If `config.timeout` is less than `10000`, it is treated as seconds and multiplied by `1000`; `config.timeout_ms` is already milliseconds.
+- `response_mode` defaults to `json`; allowed values are `json` and `sse`.
+- `poll_interval` defaults to `5.0` seconds; `poll_timeout` defaults to `600.0` seconds.
+- `poll_field` and `poll_endpoint` are optional async polling hints. Use `poll_field` for the task id field in the initial response, and `poll_endpoint` as the polling URL template with `{{task_id}}`.
+- These runtime response and polling fields are stored in the tool version metadata and are forwarded into `agent.tools[]` at the same level as `endpoint`.
 - `parameters` becomes `openai_schema.function.parameters`, so it must be a JSON Schema object.
 - Normal remote tools use `transport` `http`, `grpc`, `queue`, or `custom` and must provide `endpoint`.
 - `transport: "builtin"` creates a local embedded custom tool. Put `{"type":"builtin","name":"provider:tool_name","function":"provider.tool_name"}` in `config`.
@@ -159,6 +168,11 @@ Fields:
     "transport": "http",
     "method": "POST",
     "endpoint": "https://tool.example.com/invoke",
+    "response_mode": "json",
+    "poll_field": "task_id",
+    "poll_endpoint": "https://tool.example.com/tasks/{{task_id}}",
+    "poll_interval": 5.0,
+    "poll_timeout": 600.0,
     "auth_type": "none",
     "auth_config_ref": "",
     "auth_config": {},
@@ -222,7 +236,8 @@ Important rules:
 - `config` is only recommended runtime configuration; Agent explicit config can override it.
 - `required_tools` and `optional_tools` must be arrays when present.
 - A string tool ref is treated as `{ "type": "http", "ref": "<value>" }`.
-- Object refs use `{"type":"http|builtin|mcp","ref":"...","server":"..."}`. `server` is required for `type: "mcp"`.
+- Object refs use `{"type":"builtin|http|http_batch|mcp","ref":"...","server":"..."}`. `server` is required for `type: "mcp"`.
+- Agent runtime tool `type` is validated and must be one of `builtin`, `http`, `http_batch`, or `mcp`.
 
 Tool ref examples:
 
@@ -231,6 +246,7 @@ Tool ref examples:
   "required_tools": [
     "web-tools-mcp:web_fetch:v1",
     {"type": "http", "ref": "video-tools:create_music_video:v1"},
+    {"type": "http_batch", "ref": "translate-tools:translate_batch:v1"},
     {"type": "builtin", "ref": "seaart:generate_image"},
     {"type": "mcp", "ref": "filesystem:read_file", "server": "mcp-filesystem"}
   ],

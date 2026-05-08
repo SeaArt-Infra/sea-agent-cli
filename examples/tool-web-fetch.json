@@ -6,6 +6,9 @@
   "transport": "http",
   "endpoint": "http://web-tool-mcp.us-west1.infra.seaart.dev/tools/web_fetch",
   "method": "POST",
+  "response_mode": "json",
+  "poll_interval": 5.0,
+  "poll_timeout": 600.0,
   "parameters": {
     "type": "object",
     "properties": {
