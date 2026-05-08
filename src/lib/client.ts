@@ -20,6 +20,14 @@ export class AgentGatewayClient {
     return this.requestJSON("GET", url);
   }
 
+  async getText(path: string, query?: Record<string, string | number | boolean | undefined>): Promise<string> {
+    return this.requestText("GET", this.buildURL(path, query));
+  }
+
+  async getStream(path: string, query: Record<string, string | number | boolean | undefined> | undefined, onChunk: (chunk: string) => void): Promise<void> {
+    await this.requestStream("GET", this.buildURL(path, query), undefined, onChunk);
+  }
+
   async post(path: string, body?: unknown): Promise<unknown> {
     return this.requestJSON("POST", this.buildURL(path), body);
   }
@@ -34,6 +42,10 @@ export class AgentGatewayClient {
 
   async put(path: string, body?: unknown): Promise<unknown> {
     return this.requestJSON("PUT", this.buildURL(path), body);
+  }
+
+  async delete(path: string, query?: Record<string, string | number | boolean | undefined>): Promise<unknown> {
+    return this.requestJSON("DELETE", this.buildURL(path, query));
   }
 
   private buildURL(path: string, query?: Record<string, string | number | boolean | undefined>): string {

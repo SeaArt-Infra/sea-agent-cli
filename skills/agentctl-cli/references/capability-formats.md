@@ -2,36 +2,77 @@
 
 These formats come from `~/Desktop/sea_art/agent-gateway` models and services. `agentctl` passes files through to the gateway; it does not reshape payloads beyond JSON/YAML parsing.
 
-## Which Format To Use
+## Current API Shape
 
-Prefer concise register payloads for normal agent work:
+The gateway now keeps Tool and Skill as single current-state records, like Agent. There are no public version create, publish, or lifecycle endpoints.
 
-- `node dist/index.js tool register -f file.json` -> `ToolRegisterRequest`
-- `node dist/index.js skill register -f file.json` -> `SkillRegisterRequest`
-- `node dist/index.js agent register -f file.json` -> `AgentRegisterRequest`
+Create/register uses only `/register`:
 
-Use lower-level create payloads when the user needs full registry control:
+- `tool register` -> `POST /v1/tools/register`
+- `skill register` -> `POST /v1/skills/register`
+- `agent register` -> `POST /v1/agents/register`
 
-- `node dist/index.js tool create -f file.json` -> `ToolCreateRequest`
-- `node dist/index.js agent create -f file.json` -> `AgentCreateRequest`
+Maintenance endpoints:
 
-The current `agentctl` CLI does not expose `skill create`, version create, publish, lifecycle, update, or delete commands even though `agent-gateway` has HTTP handlers for some of them.
+- `tool update <id> -f file` -> `PUT /v1/tools/{id}`
+- `tool delete <id> --operator-id <id>` -> `DELETE /v1/tools/{id}?operator_id=...`
+- `skill update <id> -f file` -> `PUT /v1/skills/{id}`
+- `skill delete <id> --operator-id <id>` -> `DELETE /v1/skills/{id}?operator_id=...`
+- `agent update <id> -f file` -> `PUT /v1/agents/{id}`
+- `agent delete <id> --operator-id <id>` -> `DELETE /v1/agents/{id}?operator_id=...`
+
+Discovery and runtime endpoints:
+
+- `catalog list` -> `GET /v1/catalog`
+- `tool list/get/resolve` -> `GET /v1/tools`, `GET /v1/tools/{id}`, `GET /v1/tools/{id}/resolve`
+- `skill list/get` -> `GET /v1/skills`, `GET /v1/skills/{id}`
+- `agent list/capabilities` -> `GET /v1/agents`, `GET /v1/agents/{id}/capabilities`
+- `chat run/get/events/stream/cancel` -> `/v1/chat/completions`, `/v1/chats/...`
+
+## Payload Shape Switching
+
+`/register` is the only public creation endpoint, but it accepts concise register payloads and lower-level current-state payloads.
+
+Tool register switching:
+
+- Concise register shape if none of these fields are present: `tool_key`, `source_kind`, `openai_schema`, `runtime_id`.
+- Low-level `ToolCreateRequest` shape if any of those fields is present.
+
+Tool update switching:
+
+- Concise register update shape if none of these fields are present: `tool_key`, `source_kind`, `metadata`, `openai_schema`, `runtime_id`, `slug`.
+- Low-level `ToolUpdateRequest` shape if any of those fields is present.
+
+Skill register switching:
+
+- Concise register shape if none of these fields are present: `skill_key`, `source_kind`, `manifest`.
+- Low-level `SkillCreateRequest` shape if any of those fields is present.
+
+Skill update switching:
+
+- Concise register update shape if none of these fields are present: `skill_key`, `source_kind`, `metadata`, `manifest`, `slug`.
+- Low-level `SkillUpdateRequest` shape if any of those fields is present.
+
+Agent register switching:
+
+- Concise register shape if none of these fields are present: `agent_key`, `model_config`, `agent_config`.
+- Low-level `AgentCreateRequest` shape if any of those fields is present.
+- `agent update` always uses low-level `AgentUpdateRequest`.
 
 ## Common Values
 
 Stable identifiers:
 
 - Tool runtime id: normally `provider:name:version`; builtin tools often use a stable alias such as `seaart:generate_image`.
-- Tool key created by `tool register`: `provider:name`.
-- Skill id: normally `name:version`.
+- Tool key from concise register: `provider:name`.
+- Skill id/ref: normally `name:version`, but runtime resolution also accepts current `skill_key` / `name`.
 - Agent id/key: normally `name:version`.
 - Names should be stable `snake_case`.
 
 Statuses:
 
 - Capability status: `draft`, `active`, `deprecated`, `disabled`, `deleted`.
-- Version lifecycle: `draft`, `active`, `deprecated`, `disabled`.
-- In register payloads, `enabled: true` creates active capability and active default version. `enabled: false` or omitted creates draft records.
+- Concise register payloads create active capabilities by default. `enabled` is kept only for payload compatibility and no longer turns registration into draft.
 
 JSON object fields must contain valid objects when present. Use `{}` for empty `metadata`, `config`, `permissions`, `auth`, or `model` values, and `[]` for empty arrays.
 
@@ -41,7 +82,7 @@ Do not put real secrets in payloads. For auth, use a reference such as:
 {"type": "bearer", "config_ref": "secret://tool/demo"}
 ```
 
-## Tool Register
+## Tool Concise Register
 
 Use with:
 
@@ -49,7 +90,7 @@ Use with:
 node dist/index.js tool register -f <payload.json>
 ```
 
-Fields:
+Also usable with `tool update <id> -f file` if the payload does not include low-level trigger fields.
 
 ```json
 {
@@ -75,26 +116,26 @@ Fields:
   "auth": {"type": "none"},
   "config": {"timeout_ms": 10000},
   "tags": [],
-  "enabled": false,
+  "enabled": true,
   "owner_id": "provider",
-  "created_by": "provider"
+  "created_by": "provider",
+  "updated_by": "provider"
 }
 ```
 
-Important rules:
+Rules:
 
 - `name` and `description` are required.
 - `provider` defaults to `internal`; `version` defaults to `v1`; `category` defaults to `general`.
-- `id` defaults to `provider:name:version`.
-- `method` defaults to `POST`; timeout defaults to `10000` ms. If `config.timeout` is less than `10000`, it is treated as seconds and multiplied by `1000`; `config.timeout_ms` is already milliseconds.
+- `id` defaults to `provider:name:version` and becomes current `runtime_id`.
+- `method` defaults to `POST`.
+- Timeout defaults to `10000` ms. `config.timeout_ms` is milliseconds; `config.timeout` below `10000` is treated as seconds.
 - `response_mode` defaults to `json`; allowed values are `json` and `sse`.
-- `poll_interval` defaults to `5.0` seconds; `poll_timeout` defaults to `600.0` seconds.
-- `poll_field` and `poll_endpoint` are optional async polling hints. Use `poll_field` for the task id field in the initial response, and `poll_endpoint` as the polling URL template with `{{task_id}}`.
-- These runtime response and polling fields are stored in the tool version metadata and are forwarded into `agent.tools[]` at the same level as `endpoint`.
-- `parameters` becomes `openai_schema.function.parameters`, so it must be a JSON Schema object.
-- Normal remote tools use `transport` `http`, `grpc`, `queue`, or `custom` and must provide `endpoint`.
-- `transport: "builtin"` creates a local embedded custom tool. Put `{"type":"builtin","name":"provider:tool_name","function":"provider.tool_name"}` in `config`.
-- `transport: "mcp"` creates a remote custom MCP tool and does not require `endpoint`. Put MCP metadata in `config`.
+- Polling fields are stored in `tools.metadata` and forwarded into runtime `agent.tools[]`.
+- `parameters` becomes `openai_schema.function.parameters`.
+- Remote tools use `transport` `http`, `grpc`, `queue`, or `custom` and must provide `endpoint`.
+- `transport: "builtin"` creates local embedded current-state tool metadata. Put `{"type":"builtin","name":"provider:tool_name","function":"provider.tool_name"}` in `config`.
+- `transport: "mcp"` creates remote custom MCP metadata and does not require `endpoint`. Put MCP metadata in `config`.
 
 Builtin example:
 
@@ -127,15 +168,9 @@ Builtin example:
 }
 ```
 
-## Tool Create
+## Tool Low-Level Current State
 
-Use with:
-
-```bash
-node dist/index.js tool create -f <payload.json>
-```
-
-Fields:
+Use with `tool register` to create if the payload includes low-level trigger fields, or with `tool update`.
 
 ```json
 {
@@ -146,50 +181,37 @@ Fields:
   "category": "general",
   "description": "What the tool does.",
   "source_kind": "external",
+  "runtime_id": "provider:tool_name:v1",
+  "openai_schema": {
+    "type": "function",
+    "function": {
+      "name": "tool_name",
+      "description": "What the tool does.",
+      "parameters": {"type": "object", "properties": {}, "required": []}
+    }
+  },
+  "execution_mode": "remote",
+  "transport": "http",
+  "method": "POST",
+  "endpoint": "https://tool.example.com/invoke",
+  "response_mode": "json",
+  "auth_type": "none",
+  "auth_config": {},
+  "timeout_ms": 10000,
+  "checksum": "provider:tool_name:v1",
+  "changelog": "Current config.",
   "owner_id": "provider",
-  "status": "draft",
+  "status": "active",
   "metadata": {},
   "tags": [],
   "created_by": "provider",
-  "initial_version": {
-    "version": "v1",
-    "runtime_id": "provider:tool_name:v1",
-    "is_default": true,
-    "lifecycle_status": "draft",
-    "openai_schema": {
-      "type": "function",
-      "function": {
-        "name": "tool_name",
-        "description": "What the tool does.",
-        "parameters": {"type": "object", "properties": {}}
-      }
-    },
-    "execution_mode": "remote",
-    "transport": "http",
-    "method": "POST",
-    "endpoint": "https://tool.example.com/invoke",
-    "response_mode": "json",
-    "poll_field": "task_id",
-    "poll_endpoint": "https://tool.example.com/tasks/{{task_id}}",
-    "poll_interval": 5.0,
-    "poll_timeout": 600.0,
-    "auth_type": "none",
-    "auth_config_ref": "",
-    "auth_config": {},
-    "timeout_ms": 10000,
-    "metadata": {},
-    "checksum": "provider:tool_name:v1",
-    "changelog": "Initial version.",
-    "created_by": "provider"
-  }
+  "updated_by": "provider"
 }
 ```
 
-Required after defaults: `tool_key`, `provider`, `name`, `slug`, `category`, `description`, valid `source_kind`, `owner_id`, valid `status`, `metadata`, and `created_by`. If `initial_version` is present it also needs `version`, `created_by`, valid lifecycle, valid execution mode, valid transport, valid auth type, valid OpenAI tool schema, valid `metadata`, valid `auth_config`, and non-empty `checksum`.
+Create requires `created_by`; update requires `updated_by`. The OpenAI function name must stay stable when updating the same tool.
 
-Within the same tool, `openai_schema.function.name` must remain stable across versions.
-
-## Skill Register
+## Skill Concise Register
 
 Use with:
 
@@ -197,7 +219,7 @@ Use with:
 node dist/index.js skill register -f <payload.json>
 ```
 
-Fields:
+Also usable with `skill update <id> -f file` if the payload does not include low-level trigger fields.
 
 ```json
 {
@@ -222,50 +244,31 @@ Fields:
     "intent": "intent_name"
   },
   "tags": [],
-  "enabled": false,
+  "enabled": true,
   "owner_id": "provider",
-  "created_by": "provider"
+  "created_by": "provider",
+  "updated_by": "provider"
 }
 ```
 
-Important rules:
+Rules:
 
 - `name`, `description`, and `instruction` are required.
 - `version` defaults to `v1`; `provider` defaults to `internal`; `display_name` defaults to `name`; `category` defaults to `general`; `id` defaults to `name:version`.
-- `instruction` should include scope, input expectations, tool-use strategy, output format, error handling, and limits.
-- `config` is only recommended runtime configuration; Agent explicit config can override it.
+- The gateway builds current `skills.manifest` from this payload.
 - `required_tools` and `optional_tools` must be arrays when present.
-- A string tool ref is treated as `{ "type": "http", "ref": "<value>" }`.
+- A string tool ref becomes `{ "type": "http", "ref": "<value>" }`.
 - Object refs use `{"type":"builtin|http|http_batch|mcp","ref":"...","server":"..."}`. `server` is required for `type: "mcp"`.
-- Agent runtime tool `type` is validated and must be one of `builtin`, `http`, `http_batch`, or `mcp`.
 
-Tool ref examples:
+Tool refs should match the gateway resolver:
 
-```json
-{
-  "required_tools": [
-    "web-tools-mcp:web_fetch:v1",
-    {"type": "http", "ref": "video-tools:create_music_video:v1"},
-    {"type": "http_batch", "ref": "translate-tools:translate_batch:v1"},
-    {"type": "builtin", "ref": "seaart:generate_image"},
-    {"type": "mcp", "ref": "filesystem:read_file", "server": "mcp-filesystem"}
-  ],
-  "optional_tools": []
-}
-```
+- Prefer the exact tool `runtime_id` from `node dist/index.js tool resolve <tool-id>`.
+- Current resolver also accepts `provider:name` and legacy `provider:name:version` by resolving to current tool state.
+- Builtin tools may intentionally use stable aliases such as `seaart:generate_image`.
 
-Tool refs must match the gateway resolver:
+## Skill Low-Level Current State
 
-- Use the exact `tool_versions.runtime_id` when possible. Check it with `node dist/index.js tool resolve <tool-id-or-key>`.
-- Normal HTTP tools should normally be referenced as `provider:name:version`, for example `video-tools:create_music_video:v1`. Do not shorten them to `provider:name` unless that exact value is the registered runtime id.
-- Builtin tools may intentionally use stable runtime aliases, for example `seaart:generate_image`, when that is how the tool was registered.
-- Before registering a skill, verify every required tool ref resolves. A bad required ref can make agent runtime resolution fail before the worker receives the task.
-
-## Skill Create
-
-`agent-gateway` supports `POST /v1/skills`, but current `agentctl` has no `skill create` command. Use direct HTTP only if the user explicitly asks.
-
-Fields:
+Use with `skill register` to create if the payload includes low-level trigger fields, or with `skill update`.
 
 ```json
 {
@@ -277,54 +280,44 @@ Fields:
   "category": "general",
   "description": "What the skill helps with.",
   "source_kind": "external",
+  "bundle_uri": "",
+  "manifest": {
+    "id": "skill_name:v1",
+    "name": "skill_name",
+    "version": "v1",
+    "display_name": "Skill Name",
+    "description": "What the skill helps with.",
+    "category": "general",
+    "provider": "provider",
+    "required_tools": [],
+    "optional_tools": [],
+    "instruction": "Detailed operating instructions for the agent.",
+    "config": {},
+    "triggers": {},
+    "tags": []
+  },
+  "entry_file": "SKILL.md",
+  "dependencies": [],
+  "checksum": "skill_name:v1",
+  "changelog": "Current manifest.",
   "owner_id": "provider",
-  "status": "draft",
+  "status": "active",
   "metadata": {},
   "tags": [],
   "created_by": "provider",
-  "initial_version": {
-    "version": "v1",
-    "is_default": true,
-    "lifecycle_status": "draft",
-    "bundle_uri": "",
-    "manifest": {
-      "id": "skill_name:v1",
-      "name": "skill_name",
-      "version": "v1",
-      "display_name": "Skill Name",
-      "description": "What the skill helps with.",
-      "category": "general",
-      "provider": "provider",
-      "required_tools": [],
-      "optional_tools": [],
-      "instruction": "Detailed operating instructions for the agent.",
-      "config": {},
-      "triggers": {},
-      "tags": []
-    },
-    "entry_file": "SKILL.md",
-    "dependencies": [],
-    "metadata": {},
-    "checksum": "skill_name:v1",
-    "changelog": "Initial version.",
-    "created_by": "provider"
-  }
+  "updated_by": "provider"
 }
 ```
 
-Required after defaults: `skill_key`, `provider`, `name`, `slug`, `category`, `description`, valid `source_kind`, `owner_id`, valid `status`, valid `metadata`, and `created_by`. If `initial_version` is present it also needs `version`, valid lifecycle, valid JSON object `manifest`, JSON array `dependencies`, JSON object `metadata`, non-empty `checksum`, and a parseable manifest with non-empty `manifest.name` and `manifest.instruction`.
+Create requires `created_by`; update requires `updated_by`. `manifest.name` and `manifest.instruction` must be non-empty. If manifest file lists are present, they must include `entry_file`.
 
-If `manifest.files`, `manifest.bundle_files`, or `manifest.bundle.files` are present, they must include `entry_file`. If no files are declared, non-empty `instruction` is enough.
-
-## Agent Register
+## Agent Concise Register
 
 Use with:
 
 ```bash
 node dist/index.js agent register -f <payload.json>
 ```
-
-Fields:
 
 ```json
 {
@@ -348,29 +341,23 @@ Fields:
   "permissions": {},
   "tags": [],
   "public": true,
-  "enabled": false,
+  "enabled": true,
   "owner_id": "internal",
   "created_by": "internal"
 }
 ```
 
-Important rules:
+Rules:
 
 - `name`, `description`, `category`, `owner_id`, and `created_by` are required after defaults.
-- `version` defaults to `v1`; `id` defaults to `name:version`; `display_name` defaults to `name`; `owner_id` defaults to `internal`; `created_by` defaults to owner.
+- `version` defaults to `v1`; `id` defaults to `name:version`; `display_name` defaults to `name`; `owner_id` defaults to `internal`.
 - `model`, `config`, and `permissions` default to `{}`.
-- `skills` must contain non-empty refs and every referenced skill must resolve to active Skill metadata and an active Skill version. Create/register required skills first and use `enabled: true` if the agent should bind them immediately.
-- `enabled: true` creates an active agent; omitted/false creates draft.
+- `skills` must contain non-empty refs and every referenced skill must resolve to active Skill current state.
+- Agent register creates an active agent by default. `enabled` is kept only for payload compatibility.
 
-## Agent Create
+## Agent Low-Level Current State
 
-Use with:
-
-```bash
-node dist/index.js agent create -f <payload.json>
-```
-
-Fields:
+Use with `agent register` to create if the payload includes low-level trigger fields, or with `agent update`.
 
 ```json
 {
@@ -380,7 +367,7 @@ Fields:
   "name": "agent_name",
   "description": "What the agent does.",
   "owner_id": "internal",
-  "status": "draft",
+  "status": "active",
   "metadata": {},
   "model_config": {
     "default": "gpt-4o",
@@ -396,13 +383,31 @@ Fields:
   "permissions": {},
   "tags": [],
   "public": true,
-  "created_by": "internal"
+  "created_by": "internal",
+  "updated_by": "internal"
 }
 ```
 
-Required after defaults: `agent_key`, valid non-empty `category`, `name`, `description`, `owner_id`, `created_by`, valid `status`, valid object `metadata`, valid object `model_config`, valid object `agent_config`, valid object `permissions`, and non-empty skill refs.
+Create requires `created_by`; update requires `updated_by`. Every skill ref must resolve to active Skill current state.
 
-Like `agent register`, every skill ref must resolve to active Skill metadata and active Skill version.
+## Chat Payloads
+
+`chat run` builds a `ChatCompletionRequest`:
+
+```json
+{
+  "agent_id": "agent_name:v1",
+  "agent_config": {},
+  "messages": [{"role": "user", "content": "hello"}],
+  "stream": true,
+  "metadata": {}
+}
+```
+
+- Positional `<agent-id>` sets `agent_id`.
+- `--agent-config-file` sets `agent_config` and allows running with inline runtime config instead of an agent id.
+- `--no-stream` sets `stream: false`; otherwise streaming is enabled.
+- API key from CLI config is also injected by gateway into chat metadata when present.
 
 ## Verification
 

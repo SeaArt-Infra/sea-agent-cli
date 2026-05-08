@@ -16,12 +16,25 @@ export function agentCommand(): Command {
     });
 
   cmd
-    .command("create")
-    .description("Create an agent via /v1/agents")
+    .command("update")
+    .description("Update an agent via /v1/agents/{agent-id}")
+    .argument("<agent-id>")
     .requiredOption("-f, --file <path>", "JSON/YAML request file")
-    .action(async (options: { file: string }) => {
+    .action(async (agentID: string, options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
-      printJSON(await client.post("/v1/agents", await readPayload(options.file)));
+      printJSON(await client.put(`/v1/agents/${encodeURIComponent(agentID)}`, await readPayload(options.file)));
+    });
+
+  cmd
+    .command("delete")
+    .description("Delete an agent via /v1/agents/{agent-id}")
+    .argument("<agent-id>")
+    .requiredOption("--operator-id <id>", "operator id used for ownership validation")
+    .action(async (agentID: string, options: { operatorId: string }) => {
+      const client = await AgentGatewayClient.fromConfig();
+      printJSON(await client.delete(`/v1/agents/${encodeURIComponent(agentID)}`, {
+        operator_id: options.operatorId,
+      }));
     });
 
   cmd

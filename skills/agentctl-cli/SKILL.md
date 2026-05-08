@@ -1,30 +1,29 @@
 ---
 name: agentctl-cli
-description: "Use this skill when working with the local agentctl CLI for SeaArt agent-gateway: configuring endpoints and API keys, registering or creating tools, skills, and agents from JSON/YAML payloads, listing or resolving catalog entries, and running chat completions through the gateway."
+description: "Use this skill when working with the local agentctl CLI for SeaArt agent-gateway: configuring endpoints and API keys, registering/updating/deleting tools, skills, and agents, listing catalog entries, resolving runtime configs, and running or inspecting chats."
 ---
 
 # Agentctl CLI
 
 ## Scope
 
-Use this skill when a task involves the local `agentctl` project or the SeaArt `agent-gateway` CLI workflow. The CLI wraps the gateway HTTP API and is intended for registration, discovery, capability inspection, and chat testing.
+Use this skill when a task involves the local `agentctl` project or the SeaArt `agent-gateway` CLI workflow. The CLI mirrors the current gateway HTTP API and is intended for registration, discovery, capability inspection, lifecycle maintenance, and chat testing.
 
-The repository is usually at `~/Desktop/sea_art/agentctl`. The related gateway service is usually at `~/Desktop/sea_art/agent-gateway`.
+Repositories:
+
+- CLI: `~/Desktop/sea_art/agentctl`
+- Gateway: `~/Desktop/sea_art/agent-gateway`
 
 ## First Checks
 
-1. Work from the `agentctl` repo unless the user points elsewhere.
-2. Check whether the CLI is built:
+1. Work from `~/Desktop/sea_art/agentctl` unless the user points elsewhere.
+2. Build after CLI code changes:
    ```bash
    npm run build
    ```
 3. Prefer the built CLI for realistic behavior:
    ```bash
    node dist/index.js --help
-   ```
-   If local development behavior is needed, use:
-   ```bash
-   npm run dev -- --help
    ```
 4. Inspect config before gateway operations:
    ```bash
@@ -36,42 +35,46 @@ The repository is usually at `~/Desktop/sea_art/agentctl`. The related gateway s
 
 `agentctl` stores config at `~/.agentctl/config.yaml`.
 
-Set the gateway endpoint:
 ```bash
 node dist/index.js config set endpoint http://127.0.0.1:8080
-```
-
-Set the API key when required:
-```bash
 node dist/index.js config set api-key sa-xxxxxxxx
+node dist/index.js config get
 ```
 
 The API key is sent as `Authorization: Bearer <api-key>`. Do not print or commit real API keys. `config get` masks stored API keys.
 
-For request debugging, prefix commands with:
+For request debugging:
+
 ```bash
 AGENTCTL_DEBUG=1 node dist/index.js ...
 ```
 
 ## Payload Files
 
-Registration and creation commands read JSON or YAML payloads with `-f/--file`. JSON is parsed for every path except `.yaml` and `.yml`, which are parsed as YAML.
+Commands with `-f/--file` read JSON or YAML. JSON is parsed for every path except `.yaml` and `.yml`.
 
-When creating or modifying payloads for `tool register`, `tool create`, `skill register`, `agent register`, or `agent create`, read [Capability Formats](references/capability-formats.md). It captures the current `agent-gateway` request structs, defaults, validation rules, and examples for Tool, Skill, and Agent definitions.
+For payload fields, defaults, and examples, read [Capability Formats](references/capability-formats.md).
 
-Use the repo examples as schemas and starting points:
+Use the repo examples as starting points:
 
-- `examples/tool-web-fetch.json`: tool registration payload
-- `examples/skill-web.json`: skill registration payload
-- `examples/agent-web.json`: agent registration payload
-- `examples/agent-create-web.json`: agent creation payload
+- `examples/tool-web-fetch.json`: tool register payload
+- `examples/skill-web.json`: skill register payload
+- `examples/agent-web.json`: agent register payload
 - `examples/runtime-agent-config.json`: inline runtime chat config
 
-Create task-specific payload files instead of editing shared examples unless the user asks to change the examples.
+Create task-specific payload files instead of editing shared examples unless the user asks to change examples.
 
 ## Commands
 
+System:
+
+```bash
+node dist/index.js system health
+node dist/index.js system metrics
+```
+
 Config:
+
 ```bash
 node dist/index.js config set endpoint <url>
 node dist/index.js config set api-key <key>
@@ -79,101 +82,107 @@ node dist/index.js config get
 node dist/index.js config path
 ```
 
+Catalog:
+
+```bash
+node dist/index.js catalog list [--capability-type tool|skill] [--search <value>] [--status <value>] [--source-kind <value>] [--owner-id <value>] [--provider <value>] [--category <value>] [--limit <n>] [--offset <n>]
+```
+
 Tools:
+
 ```bash
 node dist/index.js tool register -f <payload.json|yaml>
-node dist/index.js tool create -f <payload.json|yaml>
 node dist/index.js tool list [--search <value>] [--status <value>] [--source-kind <value>] [--owner-id <value>] [--provider <value>] [--category <value>] [--limit <n>] [--offset <n>]
 node dist/index.js tool find [same filters as list]
 node dist/index.js tool get <tool-id>
-node dist/index.js tool resolve <tool-id> [--version <value>] [--version-id <value>]
+node dist/index.js tool update <tool-id> -f <payload.json|yaml>
+node dist/index.js tool delete <tool-id> --operator-id <id>
+node dist/index.js tool resolve <tool-id>
 ```
 
 Skills:
+
 ```bash
 node dist/index.js skill register -f <payload.json|yaml>
 node dist/index.js skill tool-register -f <payload.json|yaml>
-node dist/index.js skill list [--search <value>] [--status <value>] [--provider <value>] [--category <value>] [--limit <n>] [--offset <n>]
+node dist/index.js skill list [--search <value>] [--status <value>] [--source-kind <value>] [--owner-id <value>] [--provider <value>] [--category <value>] [--limit <n>] [--offset <n>]
+node dist/index.js skill get <skill-id>
+node dist/index.js skill update <skill-id> -f <payload.json|yaml>
+node dist/index.js skill delete <skill-id> --operator-id <id>
 ```
 
 Agents:
+
 ```bash
 node dist/index.js agent register -f <payload.json|yaml>
-node dist/index.js agent create -f <payload.json|yaml>
 node dist/index.js agent list [--search <value>] [--status <value>] [--owner-id <value>] [--category <value>] [--limit <n>] [--offset <n>]
+node dist/index.js agent update <agent-id> -f <payload.json|yaml>
+node dist/index.js agent delete <agent-id> --operator-id <id>
 node dist/index.js agent capabilities <agent-id>
 ```
 
 Chat:
+
 ```bash
 node dist/index.js chat run <agent-id> "<message>"
 node dist/index.js chat run --agent-config-file <runtime-config.json|yaml> "<message>"
 node dist/index.js chat run --no-stream <agent-id> "<message>"
 node dist/index.js chat get <chat-id>
 node dist/index.js chat events <chat-id> [--after-seq <n>] [--limit <n>]
+node dist/index.js chat stream <chat-id> [--after-seq <n>]
 node dist/index.js chat cancel <chat-id>
 ```
 
-## Common Workflows
-
-Register and test a tool-backed agent:
-```bash
-node dist/index.js tool register -f examples/tool-web-fetch.json
-node dist/index.js tool find --provider web-tools-mcp --status active
-node dist/index.js skill register -f examples/skill-web.json
-node dist/index.js skill list --status active
-node dist/index.js agent register -f examples/agent-web.json
-node dist/index.js agent capabilities web_assistant:v1
-node dist/index.js chat run web_assistant:v1 "Fetch https://example.com"
-```
-
-Create an agent through the newer create endpoint:
-```bash
-node dist/index.js agent create -f examples/agent-create-web.json
-node dist/index.js agent list --search web_assistant
-```
-
-Run with inline runtime config:
-```bash
-node dist/index.js chat run --agent-config-file examples/runtime-agent-config.json "Fetch https://example.com"
-```
-
-Generate a new capability payload:
-
-1. Read [Capability Formats](references/capability-formats.md).
-2. Choose the endpoint shape:
-   - Prefer `register` commands for concise Tool, Skill, and Agent setup.
-   - Use `create` commands when the user needs the lower-level registry shape with explicit metadata, status, version lifecycle, or immutable version payloads.
-3. For skill payloads, resolve every `required_tools` and `optional_tools` ref before registration. Use the exact `tool_versions.runtime_id` returned by `tool resolve`; for normal HTTP tools this is usually `provider:name:v1`, while some builtin tools intentionally use stable aliases such as `seaart:generate_image`.
-4. Write the payload as task-specific JSON/YAML.
-5. Build, register/create, then verify with `list`, `get`, `resolve`, or `capabilities`.
-
 ## Gateway API Mapping
 
-Use this mapping when comparing CLI behavior with `agent-gateway` handlers:
-
+- `system health` -> `GET /health`
+- `system metrics` -> `GET /metrics`
+- `catalog list` -> `GET /v1/catalog`
 - `tool register` -> `POST /v1/tools/register`
-- `tool create` -> `POST /v1/tools`
 - `tool list/find` -> `GET /v1/tools`
 - `tool get` -> `GET /v1/tools/{tool-id}`
+- `tool update` -> `PUT /v1/tools/{tool-id}`
+- `tool delete` -> `DELETE /v1/tools/{tool-id}?operator_id=...`
 - `tool resolve` -> `GET /v1/tools/{tool-id}/resolve`
 - `skill register` -> `POST /v1/skills/register`
 - `skill tool-register` -> `POST /v1/tools/register`
-- `skill list` -> `GET /v1/catalog?capability_type=skill`
+- `skill list` -> `GET /v1/skills`
+- `skill get` -> `GET /v1/skills/{skill-id}`
+- `skill update` -> `PUT /v1/skills/{skill-id}`
+- `skill delete` -> `DELETE /v1/skills/{skill-id}?operator_id=...`
 - `agent register` -> `POST /v1/agents/register`
-- `agent create` -> `POST /v1/agents`
 - `agent list` -> `GET /v1/agents`
+- `agent update` -> `PUT /v1/agents/{agent-id}`
+- `agent delete` -> `DELETE /v1/agents/{agent-id}?operator_id=...`
 - `agent capabilities` -> `GET /v1/agents/{agent-id}/capabilities`
 - `chat run` -> `POST /v1/chat/completions`
 - `chat get` -> `GET /v1/chats/{chat-id}`
 - `chat events` -> `GET /v1/chats/{chat-id}/events`
+- `chat stream` -> `GET /v1/chats/{chat-id}/stream`
 - `chat cancel` -> `POST /v1/chats/{chat-id}/cancel`
+
+## Payload Shape Switching
+
+Tool and Skill use one exposed create endpoint, `/register`, but the gateway handler accepts two payload shapes:
+
+- Tool register shape: no `tool_key`, `source_kind`, `openai_schema`, or `runtime_id`; the gateway parses `ToolRegisterRequest` and adapts it into current Tool state.
+- Tool low-level shape: includes any of `tool_key`, `source_kind`, `openai_schema`, or `runtime_id`; the gateway parses `ToolCreateRequest`.
+- Skill register shape: no `skill_key`, `source_kind`, or `manifest`; the gateway parses `SkillRegisterRequest` and adapts it into current Skill state.
+- Skill low-level shape: includes any of `skill_key`, `source_kind`, or `manifest`; the gateway parses `SkillCreateRequest`.
+- Agent register shape: no `agent_key`, `model_config`, or `agent_config`; the gateway parses `AgentRegisterRequest`.
+- Agent low-level shape: includes any of `agent_key`, `model_config`, or `agent_config`; the gateway parses `AgentCreateRequest`.
+
+Update endpoints have similar Tool/Skill switching:
+
+- `tool update` with a register-shape payload updates via `ToolRegisterRequest`; with `tool_key`, `source_kind`, `metadata`, `openai_schema`, `runtime_id`, or `slug`, it updates via `ToolUpdateRequest`.
+- `skill update` with a register-shape payload updates via `SkillRegisterRequest`; with `skill_key`, `source_kind`, `metadata`, `manifest`, or `slug`, it updates via `SkillUpdateRequest`.
+- `agent update` only accepts the low-level `AgentUpdateRequest` shape.
 
 ## Safety Notes
 
 - Do not expose real API keys in logs, commits, or final answers.
 - Confirm the endpoint before mutating gateway state.
-- Use `list`, `find`, `get`, and `capabilities` to verify registration results.
-- Treat `register`, `create`, and `cancel` as gateway-mutating operations.
-- If a command fails with `endpoint is not configured`, set `config endpoint` first.
+- Use `list`, `get`, `resolve`, and `capabilities` to verify changes.
+- Treat `register`, `update`, `delete`, and `cancel` as gateway-mutating operations.
+- Delete commands require `--operator-id`; it must match owner/creator/updater ownership checks in the gateway.
 - If a command returns `expected JSON response`, inspect the endpoint path and gateway process; the CLI expected JSON but received text or HTML.

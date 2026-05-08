@@ -45,6 +45,15 @@ export function chatCommand(): Command {
     }));
   });
 
+  cmd.command("stream").argument("<chat-id>").option("--after-seq <number>", "after sequence", "0").action(async (chatID: string, options) => {
+    const client = await AgentGatewayClient.fromConfig();
+    const renderer = createChatStreamRenderer();
+    await client.getStream(`/v1/chats/${encodeURIComponent(chatID)}/stream`, {
+      after_seq: options.afterSeq,
+    }, renderer.write);
+    renderer.end();
+  });
+
   cmd.command("cancel").argument("<chat-id>").action(async (chatID: string) => {
     const client = await AgentGatewayClient.fromConfig();
     printJSON(await client.post(`/v1/chats/${encodeURIComponent(chatID)}/cancel`));

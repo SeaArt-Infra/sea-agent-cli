@@ -8,19 +8,11 @@ export function toolCommand(): Command {
 
   cmd
     .command("register")
+    .description("Register a tool via /v1/tools/register")
     .requiredOption("-f, --file <path>", "JSON/YAML request file")
     .action(async (options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
       printJSON(await client.post("/v1/tools/register", await readPayload(options.file)));
-    });
-
-  cmd
-    .command("create")
-    .description("Create a tool via /v1/tools")
-    .requiredOption("-f, --file <path>", "JSON/YAML request file")
-    .action(async (options: { file: string }) => {
-      const client = await AgentGatewayClient.fromConfig();
-      printJSON(await client.post("/v1/tools", await readPayload(options.file)));
     });
 
   const list = async (options: any) => {
@@ -70,16 +62,34 @@ export function toolCommand(): Command {
   });
 
   cmd
-    .command("resolve")
+    .command("update")
+    .description("Update a tool via /v1/tools/{tool-id}")
     .argument("<tool-id>")
-    .option("--version <value>")
-    .option("--version-id <value>")
-    .action(async (toolID: string, options) => {
+    .requiredOption("-f, --file <path>", "JSON/YAML request file")
+    .action(async (toolID: string, options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
-      printJSON(await client.get(`/v1/tools/${encodeURIComponent(toolID)}/resolve`, {
-        version: options.version,
-        version_id: options.versionId,
+      printJSON(await client.put(`/v1/tools/${encodeURIComponent(toolID)}`, await readPayload(options.file)));
+    });
+
+  cmd
+    .command("delete")
+    .description("Delete a tool via /v1/tools/{tool-id}")
+    .argument("<tool-id>")
+    .requiredOption("--operator-id <id>", "operator id used for ownership validation")
+    .action(async (toolID: string, options: { operatorId: string }) => {
+      const client = await AgentGatewayClient.fromConfig();
+      printJSON(await client.delete(`/v1/tools/${encodeURIComponent(toolID)}`, {
+        operator_id: options.operatorId,
       }));
+    });
+
+  cmd
+    .command("resolve")
+    .description("Resolve a tool's current runtime config")
+    .argument("<tool-id>")
+    .action(async (toolID: string) => {
+      const client = await AgentGatewayClient.fromConfig();
+      printJSON(await client.get(`/v1/tools/${encodeURIComponent(toolID)}/resolve`));
     });
 
   return cmd;

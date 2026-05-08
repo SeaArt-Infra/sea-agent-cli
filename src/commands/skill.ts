@@ -8,6 +8,7 @@ export function skillCommand(): Command {
 
   cmd
     .command("register")
+    .description("Register a skill via /v1/skills/register")
     .requiredOption("-f, --file <path>", "JSON/YAML request file")
     .action(async (options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
@@ -27,22 +28,52 @@ export function skillCommand(): Command {
     .command("list")
     .option("--search <value>")
     .option("--status <value>")
+    .option("--source-kind <value>")
+    .option("--owner-id <value>")
     .option("--provider <value>")
     .option("--category <value>")
     .option("--limit <number>", "page size", "20")
     .option("--offset <number>", "page offset", "0")
     .action(async (options) => {
       const client = await AgentGatewayClient.fromConfig();
-      const response = await client.get("/v1/catalog", {
-        capability_type: "skill",
+      const response = await client.get("/v1/skills", {
         search: options.search,
         status: options.status,
+        source_kind: options.sourceKind,
+        owner_id: options.ownerId,
         provider: options.provider,
         category: options.category,
         limit: options.limit,
         offset: options.offset,
       });
-      printTable((response as any).data?.items ?? (response as any).data ?? response);
+      printTable((response as any).data ?? response);
+    });
+
+  cmd.command("get").argument("<skill-id>").action(async (skillID: string) => {
+    const client = await AgentGatewayClient.fromConfig();
+    printJSON(await client.get(`/v1/skills/${encodeURIComponent(skillID)}`));
+  });
+
+  cmd
+    .command("update")
+    .description("Update a skill via /v1/skills/{skill-id}")
+    .argument("<skill-id>")
+    .requiredOption("-f, --file <path>", "JSON/YAML request file")
+    .action(async (skillID: string, options: { file: string }) => {
+      const client = await AgentGatewayClient.fromConfig();
+      printJSON(await client.put(`/v1/skills/${encodeURIComponent(skillID)}`, await readPayload(options.file)));
+    });
+
+  cmd
+    .command("delete")
+    .description("Delete a skill via /v1/skills/{skill-id}")
+    .argument("<skill-id>")
+    .requiredOption("--operator-id <id>", "operator id used for ownership validation")
+    .action(async (skillID: string, options: { operatorId: string }) => {
+      const client = await AgentGatewayClient.fromConfig();
+      printJSON(await client.delete(`/v1/skills/${encodeURIComponent(skillID)}`, {
+        operator_id: options.operatorId,
+      }));
     });
 
   return cmd;
