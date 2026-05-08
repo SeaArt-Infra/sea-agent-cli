@@ -63,9 +63,10 @@ Agent register switching:
 
 Stable identifiers:
 
-- Tool runtime id: normally `provider:name:version`; builtin tools often use a stable alias such as `seaart:generate_image`.
-- Tool key from concise register: `provider:name`.
-- Skill id/ref: normally `name:version`, but runtime resolution also accepts current `skill_key` / `name`.
+- Tool key from concise register: `provider:name:version`.
+- Tool runtime id: normally `provider:name:version`; builtin tools may still use a stable alias such as `seaart:generate_image`.
+- Skill key from concise register: `provider:name:version`.
+- Skill id/ref: normally `provider:name:version`, but runtime resolution also accepts current `skill_key` / `name`.
 - Agent id/key: normally `name:version`.
 - Names should be stable `snake_case`.
 
@@ -127,7 +128,7 @@ Rules:
 
 - `name` and `description` are required.
 - `provider` defaults to `internal`; `version` defaults to `v1`; `category` defaults to `general`.
-- `id` defaults to `provider:name:version` and becomes current `runtime_id`.
+- `id` defaults to `provider:name:version` and becomes current `runtime_id`; `tool_key` also defaults to `provider:name:version`.
 - `method` defaults to `POST`.
 - Timeout defaults to `10000` ms. `config.timeout_ms` is milliseconds; `config.timeout` below `10000` is treated as seconds.
 - `response_mode` defaults to `json`; allowed values are `json` and `sse`.
@@ -174,10 +175,10 @@ Use with `tool register` to create if the payload includes low-level trigger fie
 
 ```json
 {
-  "tool_key": "provider:tool_name",
+  "tool_key": "provider:tool_name:v1",
   "provider": "provider",
   "name": "tool_name",
-  "slug": "tool_name",
+  "slug": "provider-tool-name-v1",
   "category": "general",
   "description": "What the tool does.",
   "source_kind": "external",
@@ -223,7 +224,7 @@ Also usable with `skill update <id> -f file` if the payload does not include low
 
 ```json
 {
-  "id": "skill_name:v1",
+  "id": "provider:skill_name:v1",
   "name": "skill_name",
   "version": "v1",
   "display_name": "Skill Name",
@@ -254,7 +255,7 @@ Also usable with `skill update <id> -f file` if the payload does not include low
 Rules:
 
 - `name`, `description`, and `instruction` are required.
-- `version` defaults to `v1`; `provider` defaults to `internal`; `display_name` defaults to `name`; `category` defaults to `general`; `id` defaults to `name:version`.
+- `version` defaults to `v1`; `provider` defaults to `internal`; `display_name` defaults to `name`; `category` defaults to `general`; `id` and `skill_key` default to `provider:name:version`.
 - The gateway builds current `skills.manifest` from this payload.
 - `required_tools` and `optional_tools` must be arrays when present.
 - A string tool ref becomes `{ "type": "http", "ref": "<value>" }`.
@@ -263,7 +264,7 @@ Rules:
 Tool refs should match the gateway resolver:
 
 - Prefer the exact tool `runtime_id` from `node dist/index.js tool resolve <tool-id>`.
-- Current resolver also accepts `provider:name` and legacy `provider:name:version` by resolving to current tool state.
+- Current resolver accepts exact `runtime_id` / `tool_key` and also `provider:name` as a compatibility lookup.
 - Builtin tools may intentionally use stable aliases such as `seaart:generate_image`.
 
 ## Skill Low-Level Current State
@@ -272,17 +273,17 @@ Use with `skill register` to create if the payload includes low-level trigger fi
 
 ```json
 {
-  "skill_key": "skill_name",
+  "skill_key": "provider:skill_name:v1",
   "display_name": "Skill Name",
   "name": "skill_name",
-  "slug": "skill_name",
+  "slug": "provider-skill-name-v1",
   "provider": "provider",
   "category": "general",
   "description": "What the skill helps with.",
   "source_kind": "external",
   "bundle_uri": "",
   "manifest": {
-    "id": "skill_name:v1",
+    "id": "provider:skill_name:v1",
     "name": "skill_name",
     "version": "v1",
     "display_name": "Skill Name",
@@ -298,7 +299,7 @@ Use with `skill register` to create if the payload includes low-level trigger fi
   },
   "entry_file": "SKILL.md",
   "dependencies": [],
-  "checksum": "skill_name:v1",
+  "checksum": "provider:skill_name:v1",
   "changelog": "Current manifest.",
   "owner_id": "provider",
   "status": "active",
@@ -332,7 +333,7 @@ node dist/index.js agent register -f <payload.json>
     "allowed": ["gpt-4o"]
   },
   "system_prompt": "Base system prompt.",
-  "skills": ["skill_name:v1"],
+  "skills": ["provider:skill_name:v1"],
   "config": {
     "temperature": 0.2,
     "max_turns": 20,
@@ -379,7 +380,7 @@ Use with `agent register` to create if the payload includes low-level trigger fi
     "max_turns": 20,
     "timeout": 600
   },
-  "skills": ["skill_name:v1"],
+  "skills": ["provider:skill_name:v1"],
   "permissions": {},
   "tags": [],
   "public": true,
