@@ -144,8 +144,9 @@ Generate a new capability payload:
 2. Choose the endpoint shape:
    - Prefer `register` commands for concise Tool, Skill, and Agent setup.
    - Use `create` commands when the user needs the lower-level registry shape with explicit metadata, status, version lifecycle, or immutable version payloads.
-3. Write the payload as task-specific JSON/YAML.
-4. Build, register/create, then verify with `list`, `get`, `resolve`, or `capabilities`.
+3. For skill payloads, resolve every `required_tools` and `optional_tools` ref before registration. Use the exact `tool_versions.runtime_id` returned by `tool resolve`; for normal HTTP tools this is usually `provider:name:v1`, while some builtin tools intentionally use stable aliases such as `seaart:generate_image`.
+4. Write the payload as task-specific JSON/YAML.
+5. Build, register/create, then verify with `list`, `get`, `resolve`, or `capabilities`.
 
 ## Gateway API Mapping
 

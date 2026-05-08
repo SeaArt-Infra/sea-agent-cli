@@ -230,12 +230,20 @@ Tool ref examples:
 {
   "required_tools": [
     "web-tools-mcp:web_fetch:v1",
+    {"type": "http", "ref": "video-tools:create_music_video:v1"},
     {"type": "builtin", "ref": "seaart:generate_image"},
     {"type": "mcp", "ref": "filesystem:read_file", "server": "mcp-filesystem"}
   ],
   "optional_tools": []
 }
 ```
+
+Tool refs must match the gateway resolver:
+
+- Use the exact `tool_versions.runtime_id` when possible. Check it with `node dist/index.js tool resolve <tool-id-or-key>`.
+- Normal HTTP tools should normally be referenced as `provider:name:version`, for example `video-tools:create_music_video:v1`. Do not shorten them to `provider:name` unless that exact value is the registered runtime id.
+- Builtin tools may intentionally use stable runtime aliases, for example `seaart:generate_image`, when that is how the tool was registered.
+- Before registering a skill, verify every required tool ref resolves. A bad required ref can make agent runtime resolution fail before the worker receives the task.
 
 ## Skill Create
 
