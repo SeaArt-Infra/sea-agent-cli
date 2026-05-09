@@ -408,6 +408,8 @@ Create requires `created_by`; update requires `updated_by`. Every skill ref must
 - Positional `<agent-id>` sets `agent_id`.
 - `--agent-config-file` sets `agent_config` and allows running with inline runtime config instead of an agent id.
 - `--no-stream` sets `stream: false`; otherwise streaming is enabled.
+- `--ws` keeps streaming enabled and uses `GET /v1/chat/completions/ws`; the CLI sends the `ChatCompletionRequest` JSON as the first WebSocket message.
+- `chat stream --ws <chat-id>` uses `GET /v1/chats/{chat-id}/ws?after_seq=...` to replay an existing run over WebSocket.
 - API key from CLI config is also injected by gateway into chat metadata when present.
 
 ## Verification
@@ -421,4 +423,5 @@ node dist/index.js skill list --provider <provider> --status active
 node dist/index.js agent list --search <agent_name>
 node dist/index.js agent capabilities <agent-id-or-key>
 node dist/index.js chat run <agent-id-or-key> "Test message"
+node dist/index.js chat run --ws <agent-id-or-key> "Test message"
 ```

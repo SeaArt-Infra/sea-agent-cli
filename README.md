@@ -49,9 +49,11 @@ agentctl agent list
 agentctl agent capabilities web_assistant:v1
 
 agentctl chat run web_assistant:v1 "Search recent AI news"
+agentctl chat run --ws web_assistant:v1 "Search recent AI news"
 agentctl chat run --agent-config-file examples/runtime-agent-config.json "Fetch https://example.com"
 agentctl chat get <chat-id>
 agentctl chat events <chat-id>
 agentctl chat stream <chat-id>
+agentctl chat stream --ws <chat-id>
 agentctl chat cancel <chat-id>
 ```

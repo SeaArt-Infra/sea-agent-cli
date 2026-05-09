@@ -12,10 +12,14 @@ export function chatCommand(): Command {
     .argument("[message...]")
     .option("-f, --agent-config-file <path>", "JSON/YAML runtime agent_config file")
     .option("--no-stream", "disable streaming")
-    .action(async (agentID: string | undefined, messageParts: string[] | undefined, options: { agentConfigFile?: string; stream: boolean }) => {
+    .option("--ws", "use WebSocket streaming")
+    .action(async (agentID: string | undefined, messageParts: string[] | undefined, options: { agentConfigFile?: string; stream: boolean; ws?: boolean }) => {
       const client = await AgentGatewayClient.fromConfig();
       if (!agentID && !options.agentConfigFile) {
         throw new Error("agent-id or --agent-config-file is required");
+      }
+      if (!options.stream && options.ws) {
+        throw new Error("--ws cannot be used with --no-stream");
       }
       const payload = {
         ...(agentID ? { agent_id: agentID } : {}),
@@ -25,7 +29,11 @@ export function chatCommand(): Command {
       };
       if (options.stream) {
         const renderer = createChatStreamRenderer();
-        await client.postStream("/v1/chat/completions", payload, renderer.write);
+        if (options.ws) {
+          await client.websocket("/v1/chat/completions/ws", undefined, payload, renderer.writeWebSocketMessage);
+        } else {
+          await client.postStream("/v1/chat/completions", payload, renderer.writeSSEChunk);
+        }
         renderer.end();
         return;
       }
@@ -45,12 +53,18 @@ export function chatCommand(): Command {
     }));
   });
 
-  cmd.command("stream").argument("<chat-id>").option("--after-seq <number>", "after sequence", "0").action(async (chatID: string, options) => {
+  cmd.command("stream").argument("<chat-id>").option("--after-seq <number>", "after sequence", "0").option("--ws", "use WebSocket streaming").action(async (chatID: string, options) => {
     const client = await AgentGatewayClient.fromConfig();
     const renderer = createChatStreamRenderer();
-    await client.getStream(`/v1/chats/${encodeURIComponent(chatID)}/stream`, {
-      after_seq: options.afterSeq,
-    }, renderer.write);
+    if (options.ws) {
+      await client.websocket(`/v1/chats/${encodeURIComponent(chatID)}/ws`, {
+        after_seq: options.afterSeq,
+      }, undefined, renderer.writeWebSocketMessage);
+    } else {
+      await client.getStream(`/v1/chats/${encodeURIComponent(chatID)}/stream`, {
+        after_seq: options.afterSeq,
+      }, renderer.writeSSEChunk);
+    }
     renderer.end();
   });
 
@@ -62,11 +76,11 @@ export function chatCommand(): Command {
   return cmd;
 }
 
-function createChatStreamRenderer(): { write: (chunk: string) => void; end: () => void } {
+function createChatStreamRenderer(): { writeSSEChunk: (chunk: string) => void; writeWebSocketMessage: (message: string) => void; end: () => void } {
   let buffer = "";
   let wroteText = false;
   return {
-    write(chunk: string): void {
+    writeSSEChunk(chunk: string): void {
       buffer += chunk;
       const parts = buffer.split(/\r?\n\r?\n/);
       buffer = parts.pop() ?? "";
@@ -74,6 +88,11 @@ function createChatStreamRenderer(): { write: (chunk: string) => void; end: () =
         if (renderChatStreamBlock(part)) {
           wroteText = true;
         }
+      }
+    },
+    writeWebSocketMessage(message: string): void {
+      if (renderChatStreamEvent(parseWebSocketEvent(message))) {
+        wroteText = true;
       }
     },
     end(): void {
@@ -90,22 +109,27 @@ function createChatStreamRenderer(): { write: (chunk: string) => void; end: () =
 function renderChatStreamBlock(block: string): boolean {
   let wroteText = false;
   for (const event of parseSSE(block)) {
-    const chunk = textFromSSEEvent(event);
-    if (chunk) {
-      process.stdout.write(chunk);
-      wroteText = true;
-    }
+    wroteText = renderChatStreamEvent(event) || wroteText;
   }
   return wroteText;
 }
 
-type SSEEvent = {
+function renderChatStreamEvent(event: ChatStreamEvent): boolean {
+  const chunk = textFromStreamEvent(event);
+  if (!chunk) {
+    return false;
+  }
+  process.stdout.write(chunk);
+  return true;
+}
+
+type ChatStreamEvent = {
   event: string;
   data: unknown;
 };
 
-function parseSSE(text: string): SSEEvent[] {
-  const events: SSEEvent[] = [];
+function parseSSE(text: string): ChatStreamEvent[] {
+  const events: ChatStreamEvent[] = [];
   for (const block of text.split(/\r?\n\r?\n+/)) {
     const lines = block.split(/\r?\n/);
     let event = "message";
@@ -132,7 +156,27 @@ function parseSSE(text: string): SSEEvent[] {
   return events;
 }
 
-function textFromSSEEvent(event: SSEEvent): string {
+function parseWebSocketEvent(message: string): ChatStreamEvent {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(message);
+  } catch {
+    return { event: "message", data: message };
+  }
+  if (!parsed || typeof parsed !== "object") {
+    return { event: "message", data: parsed };
+  }
+  const object = parsed as Record<string, unknown>;
+  const event = typeof object.event === "string" && object.event ? object.event : "message";
+  if (event === "error") {
+    const code = typeof object.code === "string" && object.code ? `${object.code}: ` : "";
+    const messageText = typeof object.error === "string" ? object.error : JSON.stringify(object);
+    throw new Error(`${code}${messageText}`);
+  }
+  return { event, data: object.data };
+}
+
+function textFromStreamEvent(event: ChatStreamEvent): string {
   if (event.event === "response.text.delta" || event.event === "response.output_text.delta") {
     return stringField(event.data, "delta");
   }

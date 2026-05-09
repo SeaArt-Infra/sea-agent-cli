@@ -125,11 +125,13 @@ Chat:
 
 ```bash
 node dist/index.js chat run <agent-id> "<message>"
+node dist/index.js chat run --ws <agent-id> "<message>"
 node dist/index.js chat run --agent-config-file <runtime-config.json|yaml> "<message>"
 node dist/index.js chat run --no-stream <agent-id> "<message>"
 node dist/index.js chat get <chat-id>
 node dist/index.js chat events <chat-id> [--after-seq <n>] [--limit <n>]
 node dist/index.js chat stream <chat-id> [--after-seq <n>]
+node dist/index.js chat stream --ws <chat-id> [--after-seq <n>]
 node dist/index.js chat cancel <chat-id>
 ```
 
@@ -156,9 +158,11 @@ node dist/index.js chat cancel <chat-id>
 - `agent delete` -> `DELETE /v1/agents/{agent-id}?operator_id=...`
 - `agent capabilities` -> `GET /v1/agents/{agent-id}/capabilities`
 - `chat run` -> `POST /v1/chat/completions`
+- `chat run --ws` -> `GET /v1/chat/completions/ws`; sends the `ChatCompletionRequest` JSON as the first WebSocket message
 - `chat get` -> `GET /v1/chats/{chat-id}`
 - `chat events` -> `GET /v1/chats/{chat-id}/events`
 - `chat stream` -> `GET /v1/chats/{chat-id}/stream`
+- `chat stream --ws` -> `GET /v1/chats/{chat-id}/ws?after_seq=...`
 - `chat cancel` -> `POST /v1/chats/{chat-id}/cancel`
 
 ## Payload Shape Switching
