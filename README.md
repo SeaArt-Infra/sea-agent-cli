@@ -50,10 +50,11 @@ seaagent agent capabilities web_assistant:v1
 
 seaagent chat run web_assistant:v1 "Search recent AI news"
 seaagent chat run --ws web_assistant:v1 "Search recent AI news"
+seaagent chat run --stream-retries 5 web_assistant:v1 "Limit reconnect attempts"
 seaagent chat run --agent-config-file examples/runtime-agent-config.json "Fetch https://example.com"
 seaagent chat get <chat-id>
 seaagent chat events <chat-id>
-seaagent chat stream <chat-id>
+seaagent chat stream <chat-id> --after-seq 12
 seaagent chat stream --ws <chat-id>
 seaagent chat cancel <chat-id>
 ```

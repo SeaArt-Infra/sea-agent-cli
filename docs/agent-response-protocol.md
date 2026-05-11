@@ -192,6 +192,13 @@ seaagent chat run <agent-id> "hello"
 
 默认流式模式下，CLI 只把文本增量写到 stdout，不显示完整事件 envelope。
 
+CLI 会记录流式事件里的 `run_id` 和 SSE/WebSocket 事件序号。连接异常结束且运行还没有进入终态时，CLI 默认无限自动重连，并通过 `GET /v1/chats/{chat-id}/stream?after_seq=...` 或 WebSocket 续传，不会重新创建 Agent 任务。可用 `--stream-retries <n>` 限制次数，`--stream-retries 0` 表示不自动续流。
+
+```bash
+seaagent chat run <agent-id> "long task"
+seaagent chat stream <chat-id> --after-seq 12
+```
+
 非流式模式：
 
 ```bash

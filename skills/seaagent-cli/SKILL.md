@@ -137,6 +137,7 @@ Chat:
 ```bash
 seaagent chat run <agent-id> "<message>"
 seaagent chat run --ws <agent-id> "<message>"
+seaagent chat run --stream-retries 5 <agent-id> "<message with limited reconnects>"
 seaagent chat run --agent-config-file <runtime-config.json|yaml> "<message>"
 seaagent chat run --no-stream <agent-id> "<message>"
 seaagent chat get <chat-id>
@@ -175,7 +176,7 @@ If a newly registered agent times out even on the no-tool smoke test, update it 
 Long media-generation requests can exceed the front proxy timeout and return `504 Gateway Time-out` even after agent registration succeeds. If that happens:
 
 - First confirm a no-tool smoke test completes; otherwise fix agent category/model config.
-- Try `chat run` streaming and `chat run --ws`, but note some deployed proxies may close SSE (`other side closed`) or reject WebSocket upgrades (`non-101 status`).
+- Try `chat run` streaming and `chat run --ws`. The CLI automatically resumes interrupted streams from the last received event seq and does not stop locally by retry count unless `--stream-retries <n>` is set. Some deployed proxies may still reject WebSocket upgrades (`non-101 status`).
 - If no `run_id`, task id, or asset URL is returned, do not claim generation succeeded. Report the gateway timeout and keep the exact prompt/settings for retry or backend log inspection.
 - The CLI currently has no direct `tool invoke` command; tool execution goes through `chat run`.
 
