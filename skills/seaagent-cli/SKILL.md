@@ -61,6 +61,7 @@ Use the repo examples as starting points:
 - `examples/skill-web.json`: skill register payload
 - `examples/agent-web.json`: agent register payload
 - `examples/agent-sandbox.json`: low-level sandbox agent payload using `agent_config.runtime.sandbox`
+- `examples/hook.json`: hook endpoint payload for the configured API key
 - `examples/runtime-agent-config.json`: inline runtime chat config
 - `examples/runtime-agent-sandbox-config.json`: inline runtime chat config that asks gateway to create a sandbox
 
@@ -133,6 +134,18 @@ seaagent agent update <agent-id> -f <payload.json|yaml>
 seaagent agent delete <agent-id> --operator-id <id>
 seaagent agent capabilities <agent-id>
 ```
+
+Hooks:
+
+```bash
+seaagent hook register -f <payload.json|yaml>
+seaagent hook list [--search <value>] [--limit <n>] [--offset <n>]
+seaagent hook get <hook-id>
+seaagent hook update <hook-id> -f <payload.json|yaml>
+seaagent hook delete <hook-id>
+```
+
+Hook commands use the configured API key as `Authorization: Bearer <api-key>`. Hook payload files do not include `api_key`; the gateway stores only a hash of the header key. The worker receives the hook endpoint in `agent.hooks[]`, calls it with fixed `POST`, and sends all events so the hook service can filter by payload `event_id`.
 
 Chat:
 
@@ -253,6 +266,11 @@ Long media-generation requests can exceed the front proxy timeout and return `50
 - `agent update` -> `PUT /v1/agents/{agent-id}`
 - `agent delete` -> `DELETE /v1/agents/{agent-id}?operator_id=...`
 - `agent capabilities` -> `GET /v1/agents/{agent-id}/capabilities`
+- `hook register` -> `POST /v1/hooks/register`
+- `hook list` -> `GET /v1/hooks`
+- `hook get` -> `GET /v1/hooks/{hook-id}`
+- `hook update` -> `PUT /v1/hooks/{hook-id}`
+- `hook delete` -> `DELETE /v1/hooks/{hook-id}`
 - `chat run` -> `POST /v1/chat/completions`
 - `chat run --ws` -> `GET /v1/chat/completions/ws`; sends the `ChatCompletionRequest` JSON as the first WebSocket message
 - `chat get` -> `GET /v1/chats/{chat-id}`

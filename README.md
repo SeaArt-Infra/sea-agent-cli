@@ -49,6 +49,12 @@ seaagent agent delete <agent-id> --operator-id web-tools-mcp
 seaagent agent list
 seaagent agent capabilities web_assistant:v1
 
+seaagent hook register -f examples/hook.json
+seaagent hook list
+seaagent hook get <hook-id>
+seaagent hook update <hook-id> -f hook-update.json
+seaagent hook delete <hook-id>
+
 seaagent chat run web_assistant:v1 "Search recent AI news"
 seaagent chat run --ws web_assistant:v1 "Search recent AI news"
 seaagent chat run --stream-retries 5 web_assistant:v1 "Limit reconnect attempts"

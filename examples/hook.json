@@ -1,0 +1,6 @@
+{
+  "name": "production-line-hook",
+  "endpoint": "https://example.com/agent-hook",
+  "description": "Receives Agent Worker events for the configured API key.",
+  "metadata": {}
+}

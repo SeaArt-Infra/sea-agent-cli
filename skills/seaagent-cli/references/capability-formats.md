@@ -11,6 +11,7 @@ Create/register uses only `/register`:
 - `tool register` -> `POST /v1/tools/register`
 - `skill register` -> `POST /v1/skills/register`
 - `agent register` -> `POST /v1/agents/register`
+- `hook register` -> `POST /v1/hooks/register`
 
 Maintenance endpoints:
 
@@ -20,6 +21,8 @@ Maintenance endpoints:
 - `skill delete <id> --operator-id <id>` -> `DELETE /v1/skills/{id}?operator_id=...`
 - `agent update <id> -f file` -> `PUT /v1/agents/{id}`
 - `agent delete <id> --operator-id <id>` -> `DELETE /v1/agents/{id}?operator_id=...`
+- `hook update <id> -f file` -> `PUT /v1/hooks/{id}`
+- `hook delete <id>` -> `DELETE /v1/hooks/{id}`
 
 Discovery and runtime endpoints:
 
@@ -27,6 +30,7 @@ Discovery and runtime endpoints:
 - `tool list/get/resolve` -> `GET /v1/tools`, `GET /v1/tools/{id}`, `GET /v1/tools/{id}/resolve`
 - `skill list/get` -> `GET /v1/skills`, `GET /v1/skills/{id}`
 - `agent list/capabilities` -> `GET /v1/agents`, `GET /v1/agents/{id}/capabilities`
+- `hook list/get` -> `GET /v1/hooks`, `GET /v1/hooks/{id}`
 - `chat run/get/events/stream/cancel` -> `/v1/chat/completions`, `/v1/chats/...`
 - `game create/get/events/logs/command/refresh/delete` -> `/v1/game/runs/...`
 
@@ -432,6 +436,34 @@ To mark a low-level agent as a sandbox agent, add `agent_config.runtime.sandbox`
 ```
 
 `runtime.sandbox` is a type marker. Do not use `runtime.sandbox.enabled`; sandbox behavior is selected by the presence of the object.
+
+## Hook Register
+
+Hook commands use the CLI configured API key as `Authorization: Bearer <api-key>`. Payload files do not include `api_key`; the gateway stores only a hash of the header key and limits hook management to that key.
+
+Use with:
+
+```bash
+seaagent hook register -f <payload.json>
+seaagent hook update <hook-id> -f <payload.json>
+```
+
+```json
+{
+  "name": "production-line-hook",
+  "endpoint": "https://example.com/agent-hook",
+  "description": "Receives Agent Worker events for the configured API key.",
+  "metadata": {}
+}
+```
+
+Rules:
+
+- `name` and `endpoint` are required.
+- `endpoint` must be an absolute `http` or `https` URL.
+- Hook calls use fixed `POST`; do not include `method`.
+- All events are sent to the hook endpoint; the hook service filters by payload `event_id`.
+- Do not put API keys or secrets in the payload.
 
 ## Chat Payloads
 
