@@ -17,6 +17,7 @@
     "keywords": ["fetch", "web", "url"]
   },
   "tags": ["web"],
+  "public": false,
   "enabled": true,
   "owner_id": "web-tools-mcp",
   "created_by": "web-tools-mcp"

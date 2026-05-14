@@ -99,14 +99,14 @@ seaagent config path
 Catalog:
 
 ```bash
-seaagent catalog list [--capability-type tool|skill] [--search <value>] [--status <value>] [--source-kind <value>] [--owner-id <value>] [--provider <value>] [--category <value>] [--limit <n>] [--offset <n>]
+seaagent catalog list [--capability-type tool|skill] [--search <value>] [--status <value>] [--source-kind <value>] [--owner-id <value>] [--public true|false] [--provider <value>] [--category <value>] [--limit <n>] [--offset <n>]
 ```
 
 Tools:
 
 ```bash
 seaagent tool register -f <payload.json|yaml>
-seaagent tool list [--search <value>] [--status <value>] [--source-kind <value>] [--owner-id <value>] [--provider <value>] [--category <value>] [--limit <n>] [--offset <n>]
+seaagent tool list [--search <value>] [--status <value>] [--source-kind <value>] [--owner-id <value>] [--public true|false] [--provider <value>] [--category <value>] [--limit <n>] [--offset <n>]
 seaagent tool find [same filters as list]
 seaagent tool get <tool-id>
 seaagent tool update <tool-id> -f <payload.json|yaml>
@@ -119,7 +119,7 @@ Skills:
 ```bash
 seaagent skill register -f <payload.json|yaml>
 seaagent skill tool-register -f <payload.json|yaml>
-seaagent skill list [--search <value>] [--status <value>] [--source-kind <value>] [--owner-id <value>] [--provider <value>] [--category <value>] [--limit <n>] [--offset <n>]
+seaagent skill list [--search <value>] [--status <value>] [--source-kind <value>] [--owner-id <value>] [--public true|false] [--provider <value>] [--category <value>] [--limit <n>] [--offset <n>]
 seaagent skill get <skill-id>
 seaagent skill update <skill-id> -f <payload.json|yaml>
 seaagent skill delete <skill-id> --operator-id <id>

@@ -22,6 +22,7 @@ export function toolCommand(): Command {
       status: options.status,
       source_kind: options.sourceKind,
       owner_id: options.ownerId,
+      public: options.public,
       provider: options.provider,
       category: options.category,
       limit: options.limit,
@@ -37,6 +38,7 @@ export function toolCommand(): Command {
     .option("--status <value>")
     .option("--source-kind <value>")
     .option("--owner-id <value>")
+    .option("--public <true|false>")
     .option("--provider <value>")
     .option("--category <value>")
     .option("--limit <number>", "page size", "20")
@@ -50,6 +52,7 @@ export function toolCommand(): Command {
     .option("--status <value>")
     .option("--source-kind <value>")
     .option("--owner-id <value>")
+    .option("--public <true|false>")
     .option("--provider <value>")
     .option("--category <value>")
     .option("--limit <number>", "page size", "20")

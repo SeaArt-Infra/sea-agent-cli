@@ -79,6 +79,7 @@ Statuses:
 
 - Capability status: `draft`, `active`, `deprecated`, `disabled`, `deleted`.
 - Concise register payloads create active capabilities by default. `enabled` is kept only for payload compatibility and no longer turns registration into draft.
+- Tool and Skill `public` defaults to `false`. Private Tool/Skill records are visible only to the same production line owner; public records can be reused across production lines.
 
 JSON object fields must contain valid objects when present. Use `{}` for empty `metadata`, `config`, `permissions`, `auth`, or `model` values, and `[]` for empty arrays.
 
@@ -122,6 +123,7 @@ Also usable with `tool update <id> -f file` if the payload does not include low-
   "auth": {"type": "none"},
   "config": {"timeout_ms": 10000},
   "tags": [],
+  "public": false,
   "enabled": true,
   "owner_id": "provider",
   "created_by": "provider",
@@ -207,6 +209,7 @@ Use with `tool register` to create if the payload includes low-level trigger fie
   "checksum": "provider:tool_name:v1",
   "changelog": "Current config.",
   "owner_id": "provider",
+  "public": false,
   "status": "active",
   "metadata": {},
   "tags": [],
@@ -250,6 +253,7 @@ Also usable with `skill update <id> -f file` if the payload does not include low
     "intent": "intent_name"
   },
   "tags": [],
+  "public": false,
   "enabled": true,
   "owner_id": "provider",
   "created_by": "provider",
@@ -262,6 +266,7 @@ Rules:
 - `name`, `description`, and `instruction` are required.
 - `version` defaults to `v1`; `provider` defaults to `internal`; `display_name` defaults to `name`; `category` defaults to `general`; `id` and `skill_key` default to `provider:name:version`.
 - The gateway builds current `skills.manifest` from this payload.
+- A Skill requested as public is forced back to private when it references any private Tool. Skill registration rejects private Tool refs owned by another production line.
 - `required_tools` and `optional_tools` must be arrays when present.
 - A string tool ref becomes `{ "type": "http", "ref": "<value>" }`.
 - Object refs use `{"type":"builtin|http|http_batch|mcp","ref":"...","server":"..."}`. `server` is required for `type: "mcp"`.
@@ -308,6 +313,7 @@ Use with `skill register` to create if the payload includes low-level trigger fi
   "checksum": "provider:skill_name:v1",
   "changelog": "Current manifest.",
   "owner_id": "provider",
+  "public": false,
   "status": "active",
   "metadata": {},
   "tags": [],
@@ -347,7 +353,6 @@ seaagent agent register -f <payload.json>
   },
   "permissions": {},
   "tags": [],
-  "public": true,
   "enabled": true,
   "owner_id": "internal",
   "created_by": "internal"
@@ -360,7 +365,7 @@ Rules:
 - Current SeaArt gateway deployments may reject arbitrary categories; use `fabric` for standard runnable agents and `seaactor` only when that category is explicitly required.
 - `version` defaults to `v1`; `id` defaults to `name:version`; `display_name` defaults to `name`; `owner_id` defaults to `internal`.
 - `model`, `config`, and `permissions` default to `{}`.
-- `skills` must contain non-empty refs and every referenced skill must resolve to active Skill current state.
+- `skills` must contain non-empty refs and every referenced skill must resolve to active Skill current state visible to the agent owner. Private Skill refs owned by another production line are rejected.
 - Agent register creates an active agent by default. `enabled` is kept only for payload compatibility.
 - To mark a registered agent as a sandbox agent, add `config.runtime.sandbox`. The presence of `sandbox` is the type marker; do not add `enabled`.
 
@@ -404,7 +409,6 @@ Use with `agent register` to create if the payload includes low-level trigger fi
   "skills": ["provider:skill_name:v1"],
   "permissions": {},
   "tags": [],
-  "public": true,
   "created_by": "internal",
   "updated_by": "internal"
 }
