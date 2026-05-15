@@ -74,12 +74,28 @@ Stable identifiers:
 - Skill id/ref: normally `provider:name:version`, but runtime resolution also accepts current `skill_key` / `name`.
 - Agent id/key: normally `name:version`.
 - Names should be stable `snake_case`.
+- Keys must be canonical business identifiers. Do not keep recovery/import suffixes such as `_restored`, `_backup`, `_copy`, timestamps, or random migration markers in `id`, `tool_key`, `skill_key`, or `agent_key`.
 
 Statuses:
 
 - Capability status: `draft`, `active`, `deprecated`, `disabled`, `deleted`.
 - Concise register payloads create active capabilities by default. `enabled` is kept only for payload compatibility and no longer turns registration into draft.
-- Tool and Skill `public` defaults to `false`. Private records are visible only to the same production line owner; public records can be reused across production lines.
+- Tool and Skill `public` is a legacy compatibility field while gateway schema slimming is in progress. Prefer omitting it in new payloads when the target gateway accepts the slim shape.
+
+List pagination:
+
+- `limit` defaults to `20` when omitted, `<= 0`, or `> 100`.
+- `offset` defaults to `0` when omitted or negative.
+- `catalog list` also caps the internal fetch window at `200`, then applies the normalized page size.
+
+Resource and runtime enums:
+
+- Agent `category`: `fabric`, `seaactor`. This is a gateway Scheduler resource class, not a display category.
+- Skill `source_kind`: `embedded`, `external`. This is legacy low-level metadata; do not send it from concise register payloads unless the gateway still requires the low-level shape.
+- Tool `execution_mode`: `local`, `remote`.
+- Tool `transport`: `http`, `grpc`, `queue`, `custom`. Concise payloads also accept compatibility values `builtin` and `mcp`, which are adapted into runtime metadata.
+- Tool `response_mode`: `json`, `sse`.
+- Tool `auth.type` / low-level `auth_type`: `none`, `api_key`, `bearer`, `oauth2`, `custom`.
 
 JSON object fields must contain valid objects when present. Use `{}` for empty `metadata`, `config`, `auth`, or `model` values, and `[]` for empty arrays.
 
@@ -88,6 +104,15 @@ Do not put real secrets in payloads. For auth, use a reference such as:
 ```json
 {"type": "bearer", "config_ref": "secret://tool/demo"}
 ```
+
+Schema-slimming guidance:
+
+- Do not add removed or display-only Agent fields to gateway payloads: `display_name`, `description`, `tags`, `permissions`, and `public`.
+- Agent `category` must stay in gateway because it drives resource scheduling.
+- Prefer `provider` over owner-like fields for Tool and Skill identity. `owner_id` is being removed from Tool and Skill flows.
+- Avoid Tool metadata that only serves catalog display in gateway payloads: `slug`, `category`, `description`, `tags`, `source_kind`, and `checksum`.
+- Avoid Skill metadata that only serves catalog display or package bookkeeping in gateway payloads: `display_name`, `category`, `tags`, `slug`, `entry_file`, `dependencies`, `bundle_uri`, `checksum`, and `owner_id`.
+- If a deployed gateway still requires an old field, keep it only in a compatibility payload and do not rely on it in Agent Worker runtime behavior.
 
 ## Tool Concise Register
 
@@ -133,14 +158,16 @@ Rules:
 - `name` and `description` are required.
 - `provider` defaults to `internal`; `version` defaults to `v1`.
 - `id` defaults to `provider:name:version` and becomes current `runtime_id`; `tool_key` also defaults to `provider:name:version`.
-- `method` defaults to `POST`.
+- `method` defaults to `POST`; use normal HTTP verbs such as `GET`, `POST`, `PUT`, `PATCH`, or `DELETE` for HTTP tools.
 - Timeout defaults to `10000` ms. `config.timeout_ms` is milliseconds; `config.timeout` below `10000` is treated as seconds.
 - `response_mode` defaults to `json`; allowed values are `json` and `sse`.
+- `poll_interval` and `poll_timeout` are seconds. Use positive values only; omit polling fields for synchronous tools.
 - Polling fields are stored in `tools.metadata` and forwarded into runtime `agent.tools[]`.
 - `parameters` becomes `openai_schema.function.parameters`.
 - Remote tools use `transport` `http`, `grpc`, `queue`, or `custom` and must provide `endpoint`.
 - `transport: "builtin"` creates local embedded current-state tool metadata. Put `{"type":"builtin","name":"provider:tool_name","function":"provider.tool_name"}` in `config`.
 - `transport: "mcp"` creates remote custom MCP metadata and does not require `endpoint`. Put MCP metadata in `config`.
+- Do not send `slug`, `category`, `tags`, `source_kind`, `checksum`, or `owner_id` in new Tool payloads.
 
 Builtin example:
 
@@ -205,7 +232,7 @@ Use with `tool register` to create if the payload includes low-level trigger fie
 }
 ```
 
-Create requires `created_by`; update requires `updated_by`. The OpenAI function name must stay stable when updating the same tool.
+Create requires `created_by`; update requires `updated_by`. The OpenAI function name must stay stable when updating the same tool. Low-level `status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`; use `active` for tools that agents may bind.
 
 ## Skill Concise Register
 
@@ -252,10 +279,11 @@ Rules:
 - `name`, `description`, and `instruction` are required.
 - `version` defaults to `v1`; `provider` defaults to `internal`; `display_name` defaults to `name`; `category` defaults to `general`; `id` and `skill_key` default to `provider:name:version`.
 - The gateway builds current `skills.manifest` from this payload.
-- A Skill requested as public is forced back to private when it references any private Tool. Skill registration rejects private Tool refs owned by another production line.
+- `display_name`, `category`, `tags`, and `public` are compatibility/display fields. Prefer omitting them in new slim payloads when the target gateway supports it; store display metadata in server instead.
 - `required_tools` and `optional_tools` must be arrays when present.
 - A string tool ref becomes `{ "type": "http", "ref": "<value>" }`.
 - Object refs use `{"type":"builtin|http|http_batch|mcp","ref":"...","server":"..."}`. `server` is required for `type: "mcp"`.
+- Do not send `slug`, `entry_file`, `dependencies`, `bundle_uri`, `checksum`, or `owner_id` in new Skill payloads.
 
 Tool refs should match the gateway resolver:
 
@@ -299,7 +327,7 @@ Use with `skill register` to create if the payload includes low-level trigger fi
 }
 ```
 
-Create requires `created_by`; update requires `updated_by`. `manifest.name` and `manifest.instruction` must be non-empty.
+Create requires `created_by`; update requires `updated_by`. `manifest.name` and `manifest.instruction` must be non-empty. Low-level `source_kind` accepts `embedded` or `external`; prefer omitting low-level source metadata from new payloads unless a deployed gateway still requires it. Low-level `status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`.
 
 ## Agent Concise Register
 
@@ -334,13 +362,15 @@ seaagent agent register -f <payload.json>
 
 Rules:
 
-- `name`, `category`, `owner_id`, and `created_by` are required after defaults.
-- Current SeaArt gateway deployments may reject arbitrary categories; use `fabric` for standard runnable agents and `seaactor` only when that category is explicitly required.
+- `name`, `category`, `owner_id`, and `created_by` are required after defaults on current gateway deployments.
+- `category` is required because it maps gateway runs to Scheduler resource pools. Allowed values are `fabric` and `seaactor`; use `fabric` for standard runnable agents and `seaactor` only when that scheduler class is explicitly required.
 - `version` defaults to `v1`; `id` defaults to `name:version`; `owner_id` defaults to `internal`.
+- `id` / `agent_key` must not include recovery or migration suffixes. Reject or normalize keys like `react_game_generator_agent_013919:v1_restored`; use a canonical key such as `react_game_generator_agent:v1` or an intentional new semantic version.
 - `model` and `config` default to `{}`.
 - `skills` must contain non-empty refs and every referenced skill must resolve to active Skill current state visible to the agent owner. Private Skill refs owned by another production line are rejected.
 - Agent register creates an active agent by default. `enabled` is kept only for payload compatibility.
 - To mark a registered agent as a sandbox agent, add `config.runtime.sandbox`. The presence of `sandbox` is the type marker; do not add `enabled`.
+- Do not send Agent `display_name`, `description`, `tags`, `permissions`, or `public`; those are removed or server-owned display fields after slimming.
 
 Sandbox concise-register config example:
 
@@ -383,7 +413,7 @@ Use with `agent register` to create if the payload includes low-level trigger fi
 }
 ```
 
-Create requires `created_by`; update requires `updated_by`. Every skill ref must resolve to active Skill current state.
+Create requires `created_by`; update requires `updated_by`. Every skill ref must resolve to active Skill current state. Low-level `status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`; an Agent must be `active` to run through chat. `category` must remain `fabric` or `seaactor`.
 
 Use the low-level update shape to fix runnable-agent issues after registration. If a no-tool chat smoke test returns a proxy timeout, first verify/update `category: "fabric"` and a known-good `model_config` before investigating tool behavior.
 

@@ -54,6 +54,7 @@ SEAAGENT_DEBUG=1 seaagent ...
 Commands with `-f/--file` read JSON or YAML. JSON is parsed for every path except `.yaml` and `.yml`.
 
 For payload fields, defaults, and examples, read [Capability Formats](references/capability-formats.md).
+That reference is the source of truth for allowed enum values, pagination bounds, required fields, and fields that are deprecated by the gateway schema-slimming work.
 
 Use the repo examples as starting points:
 
@@ -79,6 +80,15 @@ seaagent skill list --search media --status active
 Prefer reusing active tools such as `seaart:generate_image:v1`, `seaart:generate_video:v1`, `seaart:get_task_status:v1`, `seaart:list_models:v1`, and `seaart:get_model_skill:v1` when present. In skill manifests, use the full active `tool_key` for builtin SeaArt refs unless there is a confirmed reason to use the shorter runtime alias.
 
 ## Commands
+
+Command argument conventions:
+
+- `<tool-id>`, `<skill-id>`, and `<agent-id>` may be the immutable id or the stable key accepted by the gateway resolver.
+- `--status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`; use `active` for normal discovery.
+- `--limit` is bounded by the gateway to `1..100`; values outside that range default to `20`.
+- `--offset` must be `0` or greater; negative values are normalized to `0`.
+- Tool/Skill `--public` and Skill `--source-kind` are legacy filters while schema slimming is in progress; avoid relying on them for new automation unless the target gateway still exposes those columns.
+- Agent `category` is not a display taxonomy. It is the resource scheduling class used by gateway to map runs to Scheduler pools.
 
 System:
 
@@ -114,6 +124,8 @@ seaagent tool delete <tool-id> --operator-id <id>
 seaagent tool resolve <tool-id>
 ```
 
+Use `tool resolve` before referencing a tool from a skill; it shows the runtime id and normalized execution metadata that Agent Worker will receive. Register/update payloads should describe runtime behavior, not server-side display metadata. Keep `description` focused on the OpenAI function behavior until gateway stops storing display descriptions.
+
 Skills:
 
 ```bash
@@ -125,6 +137,8 @@ seaagent skill update <skill-id> -f <payload.json|yaml>
 seaagent skill delete <skill-id> --operator-id <id>
 ```
 
+Use `skill register` for agent-facing operating instructions and tool bindings. Keep display-only fields such as `display_name`, `category`, and `tags` out of new payloads where the target gateway accepts the slim shape; those fields belong in server/catalog metadata after the migration. `skill tool-register` is only a convenience alias for tool registration.
+
 Agents:
 
 ```bash
@@ -134,6 +148,10 @@ seaagent agent update <agent-id> -f <payload.json|yaml>
 seaagent agent delete <agent-id> --operator-id <id>
 seaagent agent capabilities <agent-id>
 ```
+
+Use `agent capabilities` after any agent or skill mutation. Agent `category` must be `fabric` or `seaactor`; `fabric` maps to the normal Fabric scheduler pool and `seaactor` maps to the SeaActor pool. Do not add display-only agent metadata such as `display_name`, `description`, `tags`, `permissions`, or `public`; agent records are treated as public and those fields are removed or owned by server after slimming.
+
+Agent ids and keys must be stable, canonical business identifiers. Do not register or preserve recovery/import suffixes such as `_restored`, `_backup`, `_copy`, timestamps, or random migration markers in `id` / `agent_key`; normalize `react_game_generator_agent_013919:v1_restored` to a canonical key such as `react_game_generator_agent:v1` or a deliberately versioned replacement before registering.
 
 Hooks:
 
