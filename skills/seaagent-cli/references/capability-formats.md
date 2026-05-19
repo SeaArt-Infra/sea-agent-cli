@@ -75,7 +75,7 @@ Stable identifiers:
 - Tool resource id: gateway-generated UUID.
 - Tool runtime id: normally `provider:name:version`; builtin tools may still use a stable alias such as `seaart:generate_image`.
 - Skill resource id: gateway-generated UUID.
-- Skill registry refs must use the gateway UUID; Skill manifest `id` is runtime metadata.
+- Skill registry refs and Skill manifest `id` use the gateway UUID; user-provided manifest IDs are overwritten on persistence.
 - Agent resource id: gateway-generated UUID.
 - Names should be stable `snake_case`.
 - Registry identity is always the gateway UUID. Do not send removed `tool_key`, `skill_key`, or `agent_key` fields; keep `provider`, `name`, and `version` canonical for display/runtime metadata. Do not keep recovery/import suffixes such as `_restored`, `_backup`, `_copy`, timestamps, or random migration markers in `id` or `name`.
@@ -307,7 +307,7 @@ Use with `skill register` to create if the payload includes low-level trigger fi
   "description": "What the skill helps with.",
   "source_kind": "external",
   "manifest": {
-    "id": "skill_name_manifest",
+    "id": "11111111-1111-4111-8111-111111111111",
     "name": "skill_name",
     "version": "v1",
     "display_name": "Skill Name",
