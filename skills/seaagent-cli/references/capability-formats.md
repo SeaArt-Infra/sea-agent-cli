@@ -110,7 +110,7 @@ Schema-slimming guidance:
 - Do not add removed `tool_key`, `skill_key`, or `agent_key` fields to register payloads.
 - Prefer `provider` over owner-like fields for Tool and Skill identity. `owner_id` is being removed from Tool and Skill flows.
 - Avoid Tool metadata that only serves catalog display in gateway payloads: `slug`, `category`, `description`, `tags`, and `checksum`.
-- Do not send Skill metadata in gateway payloads; the gateway stores `skills.metadata` as `{}`. Keep runtime config in `manifest.config` and display data in server/catalog layers.
+- Do not send Skill or Agent metadata in gateway payloads; the gateway stores both as `{}`. Keep Skill runtime config in `manifest.config`, Agent runtime config in `config`/`agent_config`, and display data in server/catalog layers.
 - If a deployed gateway still requires an old field, keep it only in a compatibility payload and do not rely on it in Agent Worker runtime behavior.
 
 ## Tool Concise Register
@@ -341,7 +341,7 @@ Rules:
 - `category` is required because it maps gateway runs to Scheduler resource pools. Allowed values are `fabric` and `seaactor`; use `fabric` for standard runnable agents and `seaactor` only when that scheduler class is explicitly required.
 - `version` defaults to `v1`; `owner_id` defaults to `internal`; gateway returns a UUID `id`.
 - Do not send removed `agent_key` fields for new concise agent registrations. Reject or normalize names like `react_game_generator_agent_013919`; use canonical `name: "react_game_generator_agent"` plus an intentional `owner_id` and `version`.
-- `model` and `config` default to `{}`.
+- `model` and `config` default to `{}`. Agent `metadata` is ignored and stored as `{}`; use `config` for runtime settings.
 - `skills` must contain non-empty Skill UUIDs and every referenced skill must resolve to active Skill current state visible to the agent owner. Private Skill refs owned by another production line are rejected.
 - Agent register creates an active agent by default. `enabled` is kept only for payload compatibility.
 - To mark a registered agent as a sandbox agent, add `config.runtime.sandbox`. The presence of `sandbox` is the type marker; do not add `enabled`.
@@ -390,7 +390,7 @@ Use with `agent register` to create if the payload includes low-level trigger fi
 }
 ```
 
-Create requires `created_by`; update requires `updated_by`. Every skill ref must resolve to active Skill current state. Low-level `status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`; an Agent must be `active` to run through chat. `category` must remain `fabric` or `seaactor`.
+Create requires `created_by`; update requires `updated_by`. Agent `metadata` is stored as `{}`. Every skill ref must resolve to active Skill current state. Low-level `status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`; an Agent must be `active` to run through chat. `category` must remain `fabric` or `seaactor`.
 
 Use the low-level update shape to fix runnable-agent issues after registration. If a no-tool chat smoke test returns a proxy timeout, first verify/update `category: "fabric"` and a known-good `model_config` before investigating tool behavior.
 
