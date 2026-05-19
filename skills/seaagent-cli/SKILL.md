@@ -346,8 +346,8 @@ Long media-generation requests can exceed the front proxy timeout and return `50
 
 Tool and Skill use one exposed create endpoint, `/register`, but the gateway handler accepts two payload shapes. Resource identity is the gateway-generated UUID `id`; do not include removed `tool_key`, `skill_key`, or `agent_key` fields in payloads.
 
-- Tool register shape: no `openai_schema` or `runtime_id`; the gateway parses `ToolRegisterRequest` and adapts it into current Tool state.
-- Tool low-level shape: includes `openai_schema` or `runtime_id`; the gateway parses `ToolCreateRequest` and returns a UUID `id`.
+- Tool register shape: no `openai_schema`; the gateway parses `ToolRegisterRequest` and adapts it into current Tool state.
+- Tool low-level shape: includes `openai_schema`; the gateway parses `ToolCreateRequest` and returns a UUID `id`.
 - Skill register shape: no `manifest`; the gateway parses `SkillRegisterRequest` and adapts it into current Skill state.
 - Skill low-level shape: includes `manifest`; the gateway parses `SkillCreateRequest` and returns a UUID `id`.
 - Skill metadata is reserved by gateway and stored as `{}`; put runtime config and migration notes in `manifest`, not `skills.metadata`.
@@ -356,7 +356,7 @@ Tool and Skill use one exposed create endpoint, `/register`, but the gateway han
 
 Update endpoints have similar Tool/Skill switching:
 
-- `tool update` with a register-shape payload updates via `ToolRegisterRequest`; with `metadata`, `openai_schema`, or `runtime_id`, it updates via `ToolUpdateRequest`.
+- `tool update` with a register-shape payload updates via `ToolRegisterRequest`; with `metadata`, `openai_schema`, or `runtime_type`, it updates via `ToolUpdateRequest`.
 - `skill update` with a register-shape payload updates via `SkillRegisterRequest`; with `manifest`, it updates via `SkillUpdateRequest`.
 - `agent update` only accepts the low-level `AgentUpdateRequest` shape.
 

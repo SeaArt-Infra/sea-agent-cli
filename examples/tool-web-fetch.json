@@ -3,7 +3,7 @@
   "name": "web_fetch",
   "version": "v1",
   "description": "Fetch a webpage and return the response body and metadata.",
-  "transport": "http",
+  "runtime_type": "http",
   "endpoint": "http://web-tool-mcp.us-west1.infra.seaart.dev/tools/web_fetch",
   "method": "POST",
   "response_mode": "json",

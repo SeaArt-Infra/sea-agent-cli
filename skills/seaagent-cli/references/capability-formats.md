@@ -41,13 +41,13 @@ Discovery and runtime endpoints:
 
 Tool register switching:
 
-- Concise register shape if none of these fields are present: `openai_schema`, `runtime_id`.
-- Low-level `ToolCreateRequest` shape if `openai_schema` or `runtime_id` is present.
+- Concise register shape if `openai_schema` is absent.
+- Low-level `ToolCreateRequest` shape if `openai_schema` is present.
 - Do not send removed `tool_key` fields; agent-gateway returns an immutable UUID `id`.
 
 Tool update switching:
 
-- Concise register update shape if none of these fields are present: `metadata`, `openai_schema`, `runtime_id`.
+- Concise register update shape if none of these fields are present: `metadata`, `openai_schema`, `runtime_type`.
 - Low-level `ToolUpdateRequest` shape if any of those fields is present.
 
 Skill register switching:
@@ -73,7 +73,6 @@ Agent register switching:
 Stable identifiers:
 
 - Tool resource id: gateway-generated UUID.
-- Tool runtime id: normally `provider:name:version`; builtin tools may still use a stable alias such as `seaart:generate_image`.
 - Skill resource id: gateway-generated UUID.
 - Skill registry refs and Skill manifest `id` use the gateway UUID; user-provided manifest IDs are overwritten on persistence.
 - Agent resource id: gateway-generated UUID.
@@ -96,18 +95,13 @@ Resource and runtime enums:
 
 - Agent `category`: `fabric`, `seaactor`. This is a gateway Scheduler resource class, not a display category.
 - Skill `metadata` is reserved by the gateway and stored as `{}`; do not put migration notes, display data, or runtime config in `skills.metadata`.
-- Tool `execution_mode`: `local`, `remote`.
-- Tool `transport`: `http`, `grpc`, `queue`, `custom`. Concise payloads also accept compatibility values `builtin` and `mcp`, which are adapted into runtime metadata.
+- Tool `runtime_type`: `http`, `builtin`, `mcp`. Concise payloads still accept old `transport` compatibility values and convert them into `runtime_type`.
+- HTTP tools keep `method` in runtime metadata and forward it to Agent Worker; default is `POST`.
 - Tool `response_mode`: `json`, `sse`.
-- Tool `auth.type` / low-level `auth_type`: `none`, `api_key`, `bearer`, `oauth2`, `custom`.
 
-JSON object fields must contain valid objects when present. Use `{}` for empty `metadata`, `config`, `auth`, or `model` values, and `[]` for empty arrays.
+JSON object fields must contain valid objects when present. Use `{}` for empty `metadata`, `config`, or `model` values, and `[]` for empty arrays.
 
-Do not put real secrets in payloads. For auth, use a reference such as:
-
-```json
-{"type": "bearer", "config_ref": "secret://tool/demo"}
-```
+Do not put real secrets in payloads.
 
 Schema-slimming guidance:
 
@@ -134,7 +128,7 @@ Also usable with `tool update <id> -f file` if the payload does not include low-
   "provider": "provider",
   "name": "tool_name",
   "version": "v1",
-  "transport": "http",
+  "runtime_type": "http",
   "description": "What the tool does.",
   "endpoint": "https://tool.example.com/invoke",
   "method": "POST",
@@ -148,12 +142,9 @@ Also usable with `tool update <id> -f file` if the payload does not include low-
     "properties": {},
     "required": []
   },
-  "auth": {"type": "none"},
   "config": {"timeout_ms": 10000},
   "public": false,
-  "enabled": true,
-  "created_by": "provider",
-  "updated_by": "provider"
+  "enabled": true
 }
 ```
 
@@ -161,16 +152,15 @@ Rules:
 
 - `name` and `description` are required.
 - `provider` defaults to `internal`; `version` defaults to `v1`.
-- Gateway generates concise-register `runtime_id` from canonical `provider:name:version` when `id` is not supplied.
-- `method` defaults to `POST`; use normal HTTP verbs such as `GET`, `POST`, `PUT`, `PATCH`, or `DELETE` for HTTP tools.
+- `runtime_type` defaults to `http` when `endpoint` is present, otherwise to `builtin`; `method` defaults to `POST` and is forwarded to Agent Worker.
 - Timeout defaults to `10000` ms. `config.timeout_ms` is milliseconds; `config.timeout` below `10000` is treated as seconds.
 - `response_mode` defaults to `json`; allowed values are `json` and `sse`.
 - `poll_interval` and `poll_timeout` are seconds. Use positive values only; omit polling fields for synchronous tools.
 - Polling fields are stored in `tools.metadata` and forwarded into runtime `agent.tools[]`.
 - `parameters` becomes `openai_schema.function.parameters`.
-- Remote tools use `transport` `http`, `grpc`, `queue`, or `custom` and must provide `endpoint`.
-- `transport: "builtin"` creates local embedded current-state tool metadata. Put `{"type":"builtin","name":"provider:tool_name","function":"provider.tool_name"}` in `config`.
-- `transport: "mcp"` creates remote custom MCP metadata and does not require `endpoint`. Put MCP metadata in `config`.
+- `runtime_type: "http"` tools must provide `endpoint`.
+- `runtime_type: "builtin"` creates embedded current-state tool metadata. Put `{"type":"builtin","name":"provider:tool_name","function":"provider.tool_name"}` in `config`.
+- `runtime_type: "mcp"` creates MCP metadata and does not require `endpoint`. Put MCP metadata in `config`.
 - Do not send removed `tool_key` fields on `/v1/tools/register`.
 - Do not send `slug`, `category`, `tags`, `checksum`, or `owner_id` in new Tool payloads.
 
@@ -178,11 +168,10 @@ Builtin example:
 
 ```json
 {
-  "id": "seaart:generate_image",
   "provider": "seaart",
   "name": "generate_image",
   "version": "v1",
-  "transport": "builtin",
+  "runtime_type": "builtin",
   "description": "SeaArt image generation.",
   "parameters": {
     "type": "object",
@@ -197,8 +186,7 @@ Builtin example:
     "function": "seaart.generate_image",
     "timeout_ms": 300000
   },
-  "enabled": true,
-  "created_by": "seaart"
+  "enabled": true
 }
 ```
 
@@ -210,7 +198,6 @@ Use with `tool register` to create if the payload includes low-level trigger fie
 {
   "provider": "provider",
   "name": "tool_name",
-  "runtime_id": "provider:tool_name:v1",
   "openai_schema": {
     "type": "function",
     "function": {
@@ -219,24 +206,18 @@ Use with `tool register` to create if the payload includes low-level trigger fie
       "parameters": {"type": "object", "properties": {}, "required": []}
     }
   },
-  "execution_mode": "remote",
-  "transport": "http",
-  "method": "POST",
+  "runtime_type": "http",
   "endpoint": "https://tool.example.com/invoke",
+  "method": "POST",
   "response_mode": "json",
-  "auth_type": "none",
-  "auth_config": {},
   "timeout_ms": 10000,
-  "changelog": "Current config.",
   "public": false,
   "status": "active",
-  "metadata": {},
-  "created_by": "provider",
-  "updated_by": "provider"
+  "metadata": {}
 }
 ```
 
-Create requires `created_by`; update requires `updated_by`. The OpenAI function name must stay stable when updating the same tool. Low-level `status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`; use `active` for tools that agents may bind.
+The OpenAI function name must stay stable when updating the same tool. Low-level `status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`; use `active` for tools that agents may bind.
 
 ## Skill Concise Register
 
@@ -289,8 +270,7 @@ Rules:
 
 Tool refs should match the gateway resolver:
 
-- Prefer the exact tool `runtime_id` from `seaagent tool resolve <tool-id>`.
-- Current resolver accepts registered Tool UUIDs for `http`, `http_batch`, and registered `builtin` refs.
+- Use registered Tool UUIDs for `http`, `http_batch`, and registered `builtin` refs.
 - Builtin tools may intentionally use stable aliases such as `seaart:generate_image`.
 - For SeaArt builtin media tools registered in the gateway, use the active Tool UUID in skill manifests. Runtime-local `builtin` refs can still use their builtin identifier when no registry Tool is required.
 
