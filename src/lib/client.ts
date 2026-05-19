@@ -16,6 +16,10 @@ export class AgentGatewayClient {
     return new AgentGatewayClient(config.endpoint, config.apiKey, config.userId);
   }
 
+  getEndpoint(): string {
+    return this.endpoint;
+  }
+
   async get(path: string, query?: Record<string, string | number | boolean | undefined>): Promise<unknown> {
     const url = this.buildURL(path, query);
     return this.requestJSON("GET", url);
