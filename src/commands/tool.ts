@@ -1,6 +1,5 @@
 import { Command } from "commander";
 import { AgentGatewayClient } from "../lib/client.js";
-import { confirmRegistryMutation } from "../lib/confirmation.js";
 import { readPayload } from "../lib/files.js";
 import { printJSON, printTable } from "../lib/output.js";
 
@@ -13,15 +12,7 @@ export function toolCommand(): Command {
     .requiredOption("-f, --file <path>", "JSON/YAML request file")
     .action(async (options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
-      const payload = await readPayload(options.file);
-      await confirmRegistryMutation({
-        action: "register",
-        endpoint: client.getEndpoint(),
-        payload,
-        payloadPath: options.file,
-        resource: "tool",
-      });
-      printJSON(await client.post("/v1/tools/register", payload));
+      printJSON(await client.post("/v1/tools/register", await readPayload(options.file)));
     });
 
   const list = async (options: any) => {
@@ -71,16 +62,7 @@ export function toolCommand(): Command {
     .requiredOption("-f, --file <path>", "JSON/YAML request file")
     .action(async (toolID: string, options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
-      const payload = await readPayload(options.file);
-      await confirmRegistryMutation({
-        action: "update",
-        endpoint: client.getEndpoint(),
-        payload,
-        payloadPath: options.file,
-        resource: "tool",
-        resourceID: toolID,
-      });
-      printJSON(await client.put(`/v1/tools/${encodeURIComponent(toolID)}`, payload));
+      printJSON(await client.put(`/v1/tools/${encodeURIComponent(toolID)}`, await readPayload(options.file)));
     });
 
   cmd

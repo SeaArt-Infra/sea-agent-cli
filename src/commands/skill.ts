@@ -1,6 +1,5 @@
 import { Command } from "commander";
 import { AgentGatewayClient } from "../lib/client.js";
-import { confirmRegistryMutation } from "../lib/confirmation.js";
 import { readPayload } from "../lib/files.js";
 import { printJSON, printTable } from "../lib/output.js";
 
@@ -13,15 +12,7 @@ export function skillCommand(): Command {
     .requiredOption("-f, --file <path>", "JSON/YAML request file")
     .action(async (options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
-      const payload = await readPayload(options.file);
-      await confirmRegistryMutation({
-        action: "register",
-        endpoint: client.getEndpoint(),
-        payload,
-        payloadPath: options.file,
-        resource: "skill",
-      });
-      printJSON(await client.post("/v1/skills/register", payload));
+      printJSON(await client.post("/v1/skills/register", await readPayload(options.file)));
     });
 
   cmd
@@ -30,15 +21,7 @@ export function skillCommand(): Command {
     .requiredOption("-f, --file <path>", "JSON/YAML request file")
     .action(async (options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
-      const payload = await readPayload(options.file);
-      await confirmRegistryMutation({
-        action: "register",
-        endpoint: client.getEndpoint(),
-        payload,
-        payloadPath: options.file,
-        resource: "tool",
-      });
-      printJSON(await client.post("/v1/tools/register", payload));
+      printJSON(await client.post("/v1/tools/register", await readPayload(options.file)));
     });
 
   cmd
@@ -76,16 +59,7 @@ export function skillCommand(): Command {
     .requiredOption("-f, --file <path>", "JSON/YAML request file")
     .action(async (skillID: string, options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
-      const payload = await readPayload(options.file);
-      await confirmRegistryMutation({
-        action: "update",
-        endpoint: client.getEndpoint(),
-        payload,
-        payloadPath: options.file,
-        resource: "skill",
-        resourceID: skillID,
-      });
-      printJSON(await client.put(`/v1/skills/${encodeURIComponent(skillID)}`, payload));
+      printJSON(await client.put(`/v1/skills/${encodeURIComponent(skillID)}`, await readPayload(options.file)));
     });
 
   cmd
