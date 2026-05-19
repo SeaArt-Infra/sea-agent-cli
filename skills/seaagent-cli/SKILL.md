@@ -201,13 +201,34 @@ seaagent sandbox delete <sandbox-run-id>
 
 ## Agent Registration Workflow
 
+Registry mutations are gated operations. Before running any `agent`, `skill`,
+or `tool` register/update command, ask the user for explicit approval and wait
+for a clear affirmative response. This applies to:
+
+- `seaagent agent register`
+- `seaagent agent update`
+- `seaagent skill register`
+- `seaagent skill update`
+- `seaagent skill tool-register`
+- `seaagent tool register`
+- `seaagent tool update`
+
+Show the intended endpoint, operation, resource type, resource id/key when
+available, and payload file path or concise payload summary before asking.
+Do not infer approval from the user's original task description.
+Do not use CLI flags, environment variables, or non-interactive scripts to
+bypass this approval step. On macOS, the CLI uses a desktop confirmation dialog
+for registry mutations; wait for the user to approve that dialog before
+continuing.
+
 For gateway mutations, use this order:
 
 1. Confirm `seaagent config get` points at the intended endpoint.
 2. Check for an existing agent/skill with `list --search`.
-3. Register or update the required skill first, then register or update the agent.
-4. Verify with `seaagent agent capabilities <agent-id-or-key>`.
-5. Run a lightweight smoke test before invoking expensive tools:
+3. Ask for explicit approval before each register/update mutation.
+4. Register or update the required skill first, then register or update the agent.
+5. Verify with `seaagent agent capabilities <agent-id-or-key>`.
+6. Run a lightweight smoke test before invoking expensive tools:
    ```bash
    seaagent chat run --no-stream <agent-id-or-key> "请用一句话说明你能做什么，不要调用任何工具。"
    ```
