@@ -330,14 +330,13 @@ seaagent agent register -f <payload.json>
     "timeout": 600
   },
   "enabled": true,
-  "owner_id": "internal",
-  "created_by": "internal"
+  "owner_id": "internal"
 }
 ```
 
 Rules:
 
-- `name`, `category`, `owner_id`, and `created_by` are required after defaults on current gateway deployments.
+- `name`, `category`, and `owner_id` are required after defaults on current gateway deployments.
 - `category` is required because it maps gateway runs to Scheduler resource pools. Allowed values are `fabric` and `seaactor`; use `fabric` for standard runnable agents and `seaactor` only when that scheduler class is explicitly required.
 - `version` defaults to `v1`; `owner_id` defaults to `internal`; gateway returns a UUID `id`.
 - Do not send removed `agent_key` fields for new concise agent registrations. Reject or normalize names like `react_game_generator_agent_013919`; use canonical `name: "react_game_generator_agent"` plus an intentional `owner_id` and `version`.
@@ -384,13 +383,11 @@ Use with `agent register` to create if the payload includes low-level trigger fi
     "max_turns": 20,
     "timeout": 600
   },
-  "skills": ["11111111-1111-4111-8111-111111111111"],
-  "created_by": "internal",
-  "updated_by": "internal"
+  "skills": ["11111111-1111-4111-8111-111111111111"]
 }
 ```
 
-Create requires `created_by`; update requires `updated_by`. Agent `metadata` is stored as `{}`. Every skill ref must resolve to active Skill current state. Low-level `status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`; an Agent must be `active` to run through chat. `category` must remain `fabric` or `seaactor`.
+Agent `metadata` is stored as `{}`. Every skill ref must resolve to active Skill current state. Low-level `status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`; an Agent must be `active` to run through chat. `category` must remain `fabric` or `seaactor`.
 
 Use the low-level update shape to fix runnable-agent issues after registration. If a no-tool chat smoke test returns a proxy timeout, first verify/update `category: "fabric"` and a known-good `model_config` before investigating tool behavior.
 
