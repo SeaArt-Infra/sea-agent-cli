@@ -1,5 +1,5 @@
 {
-  "name": "@seaart/agentctl",
+  "name": "@seaart/sea-agent-cli",
   "version": "0.1.0",
   "description": "CLI for agent-gateway registration and chat workflows.",
   "type": "module",

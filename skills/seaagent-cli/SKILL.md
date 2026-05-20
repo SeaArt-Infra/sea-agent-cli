@@ -11,12 +11,12 @@ Use this skill when a task involves the local `seaagent` CLI project or the SeaA
 
 Repositories:
 
-- CLI: `~/Desktop/sea_art/agentctl`
+- CLI: `~/Desktop/sea_art/sea-agent-cli`
 - Gateway: `~/Desktop/sea_art/agent-gateway`
 
 ## First Checks
 
-1. Work from `~/Desktop/sea_art/agentctl` unless the user points elsewhere.
+1. Work from `~/Desktop/sea_art/sea-agent-cli` unless the user points elsewhere.
 2. Build after CLI code changes:
    ```bash
    npm run build

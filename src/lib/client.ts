@@ -223,7 +223,7 @@ export class AgentGatewayClient {
 }
 
 function isDebugEnabled(): boolean {
-  return process.env.SEAAGENT_DEBUG === "1" || process.env.AGENTCTL_DEBUG === "1";
+  return process.env.SEAAGENT_DEBUG === "1";
 }
 
 function errorMessageFromResponse(text: string): string {
