@@ -6,10 +6,12 @@ import { chatCommand } from "./commands/chat.js";
 import { configCommand } from "./commands/config.js";
 import { gameCommand, sandboxCommand } from "./commands/game.js";
 import { hookCommand } from "./commands/hook.js";
+import { selfCommand } from "./commands/self.js";
 import { skillCommand } from "./commands/skill.js";
 import { systemCommand } from "./commands/system.js";
 import { toolCommand } from "./commands/tool.js";
 import { addHelpText } from "./lib/help.js";
+import { maybeNotifySkillUpdate } from "./lib/self-update.js";
 
 const program = new Command();
 
@@ -19,6 +21,7 @@ program
   .version("0.1.0")
   .showHelpAfterError()
   .showSuggestionAfterError()
+  .addCommand(selfCommand())
   .addCommand(configCommand())
   .addCommand(systemCommand())
   .addCommand(catalogCommand())
@@ -41,6 +44,10 @@ Configuration:
     seaagent config set user-id production-line-123
 
 Common workflows:
+  Check local CLI support files:
+    seaagent self check
+    seaagent self update-skill
+
   Discover reusable capabilities:
     seaagent catalog list --capability-type skill --status active
     seaagent tool list --search image --status active
@@ -69,7 +76,15 @@ More help:
 
 const argv = process.argv.map((arg) => (arg === "-help" ? "--help" : arg));
 
-program.parseAsync(argv).catch((error) => {
+try {
+  await maybeNotifySkillUpdate(argv.slice(2));
+} catch (error) {
+  if (process.env.SEAAGENT_DEBUG === "1") {
+    console.error(`[update-check:error] ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+await program.parseAsync(argv).catch((error) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });

@@ -1,6 +1,7 @@
 ---
 name: seaagent-cli
 description: "Use this skill when working with the local seaagent CLI for SeaArt agent-gateway: configuring endpoints and API keys, registering/updating/deleting tools, skills, and agents, listing catalog entries, resolving runtime configs, and running or inspecting chats."
+version: "2026.05.20"
 ---
 
 # Seaagent CLI
@@ -11,12 +12,12 @@ Use this skill when a task involves the local `seaagent` CLI project or the SeaA
 
 Repositories:
 
-- CLI: `~/Desktop/sea_art/sea-agent-cli`
+- CLI: `~/Desktop/sea_art/agentctl`
 - Gateway: `~/Desktop/sea_art/agent-gateway`
 
 ## First Checks
 
-1. Work from `~/Desktop/sea_art/sea-agent-cli` unless the user points elsewhere.
+1. Work from `~/Desktop/sea_art/agentctl` unless the user points elsewhere.
 2. Build after CLI code changes:
    ```bash
    npm run build
@@ -40,9 +41,6 @@ seaagent config set endpoint http://127.0.0.1:8080
 seaagent config set api-key sa-xxxxxxxx
 seaagent config get
 ```
-
-`endpoint` may be the gateway base URL or a URL that already includes
-`/agent-v2`. The CLI automatically adds `/agent-v2` when it is missing.
 
 The API key is sent as `Authorization: Bearer <api-key>`. Do not print or commit real API keys. `config get` masks stored API keys.
 
@@ -108,6 +106,15 @@ seaagent config set api-key <key>
 seaagent config get
 seaagent config path
 ```
+
+Self maintenance:
+
+```bash
+seaagent self check
+seaagent self update-skill
+```
+
+The CLI compares its bundled `seaagent-cli` skill with `~/.codex/skills/seaagent-cli` at most every 2 hours and prints update notices to stderr. Use `self update-skill` for an explicit local skill update.
 
 Catalog:
 

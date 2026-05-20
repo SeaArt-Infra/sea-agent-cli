@@ -30,9 +30,16 @@ Authorization: Bearer sa-xxxxxxxx
 X-User-ID: production-line-123
 ```
 
+The CLI checks the bundled `seaagent-cli` Codex skill against
+`~/.codex/skills/seaagent-cli` at most every 2 hours. Notices are printed to
+stderr only. Run `seaagent self update-skill` to install the bundled skill.
+
 ## Usage
 
 ```bash
+seaagent self check
+seaagent self update-skill
+
 seaagent system health
 seaagent catalog list --capability-type skill --status active
 
