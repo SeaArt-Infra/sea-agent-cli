@@ -4,6 +4,7 @@ import { confirmRegistryMutation } from "../lib/confirmation.js";
 import { readPayload } from "../lib/files.js";
 import { addHelpText, commonListHelp, payloadFileHelp } from "../lib/help.js";
 import { printJSON, printTable } from "../lib/output.js";
+import { warnProviderNormalized, withRegisterErrorHint } from "../lib/registry-hints.js";
 
 export function skillCommand(): Command {
   const cmd = addHelpText(new Command("skill").description("Register and inspect skills"), `
@@ -31,7 +32,11 @@ Examples:
   seaagent skill register --file payloads/skill.yaml
 
 Prefer UUID tool refs for registered tools. Use 'seaagent tool resolve <tool-id>'
-when you need to inspect runtime metadata before binding.`)
+when you need to inspect runtime metadata before binding.
+
+Payload notes:
+  - provider may be normalized by the gateway to an internal provider UUID.
+    Use the returned provider value for later --provider filters.`)
     .action(async (options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
       const payload = await readPayload(options.file);
@@ -42,7 +47,9 @@ when you need to inspect runtime metadata before binding.`)
         payloadPath: options.file,
         resource: "skill",
       });
-      printJSON(await client.post("/v1/skills/register", payload));
+      const response = await withRegisterErrorHint("skill", "examples/skill-web.json", () => client.post("/v1/skills/register", payload));
+      warnProviderNormalized("skill", payload, response);
+      printJSON(response);
     });
 
   cmd
@@ -65,7 +72,9 @@ This is a convenience alias for 'seaagent tool register'.`)
         payloadPath: options.file,
         resource: "tool",
       });
-      printJSON(await client.post("/v1/tools/register", payload));
+      const response = await withRegisterErrorHint("tool", "examples/tool-web-fetch.json", () => client.post("/v1/tools/register", payload));
+      warnProviderNormalized("tool", payload, response);
+      printJSON(response);
     });
 
   cmd

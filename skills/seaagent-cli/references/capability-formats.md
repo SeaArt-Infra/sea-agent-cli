@@ -29,7 +29,7 @@ Discovery and runtime endpoints:
 - `catalog list` -> `GET /v1/catalog`
 - `tool list/get/resolve` -> `GET /v1/tools`, `GET /v1/tools/{id}`, `GET /v1/tools/{id}/resolve`
 - `skill list/get` -> `GET /v1/skills`, `GET /v1/skills/{id}`
-- `agent list/capabilities` -> `GET /v1/agents`, `GET /v1/agents/{id}/capabilities`
+- `agent list/get/capabilities` -> `GET /v1/agents`, `GET /v1/agents/{id}`, `GET /v1/agents/{id}/capabilities`
 - `hook list/get` -> `GET /v1/hooks`, `GET /v1/hooks/{id}`
 - `chat run/get/events/stream/cancel` -> `/v1/chat/completions`, `/v1/chats/...`
 - `sandbox create/get/events/stream/logs/files/read/archive/command/refresh/resume/delete` -> `/v1/sandbox/runs/...`
@@ -152,6 +152,7 @@ Rules:
 
 - `name` and `description` are required.
 - `provider` defaults to `internal`; `version` defaults to `v1`.
+- The gateway may normalize `provider` to an internal provider UUID; use the returned provider value for later `--provider` filters.
 - `runtime_type` defaults to `http` when `endpoint` is present, otherwise to `builtin`; `method` defaults to `POST` and is forwarded to Agent Worker.
 - Timeout defaults to `10000` ms. `config.timeout_ms` is milliseconds; `config.timeout` below `10000` is treated as seconds.
 - `response_mode` defaults to `json`; allowed values are `json` and `sse`.
@@ -260,6 +261,7 @@ Rules:
 
 - `name`, `description`, and `instruction` are required.
 - `version` defaults to `v1`; `provider` defaults to `internal`; `display_name` defaults to `name`; `category` defaults to `general`; gateway returns a UUID `id` from `provider:name:version`.
+- The gateway may normalize `provider` to an internal provider UUID; use the returned provider value for later `--provider` filters.
 - The gateway builds current `skills.manifest` from this payload.
 - `display_name`, `category`, `tags`, and `public` are compatibility/display fields. Prefer omitting them in new slim payloads when the target gateway supports it; store display metadata in server instead.
 - `required_tools` and `optional_tools` must be arrays when present.
@@ -458,7 +460,7 @@ Rules:
 
 - Positional `<agent-id>` sets `agent_id`.
 - `--agent-config-file` sets `agent_config` and allows running with inline runtime config instead of an agent id.
-- `--no-stream` sets `stream: false`; otherwise streaming is enabled.
+- `--no-stream` sets `stream: false`; when stored events are available, CLI enriches the JSON response with `response.message.content`.
 - `--ws` keeps streaming enabled and uses `GET /v1/chat/completions/ws`; the CLI sends the `ChatCompletionRequest` JSON as the first WebSocket message.
 - `chat stream --ws <chat-id>` uses `GET /v1/chats/{chat-id}/ws?after_seq=...` to replay an existing run over WebSocket.
 - API key from CLI config is also injected by gateway into chat metadata when present.
@@ -473,6 +475,7 @@ seaagent tool find --provider <provider> --status active
 seaagent tool resolve <tool-id>
 seaagent skill list --provider <provider> --status active
 seaagent agent list --search <agent_name>
+seaagent agent get <agent-id>
 seaagent agent capabilities <agent-id>
 seaagent chat run --no-stream <agent-id> "请用一句话说明你能做什么，不要调用任何工具。"
 seaagent chat run <agent-id> "Test message"

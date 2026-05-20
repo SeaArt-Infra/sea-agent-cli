@@ -40,7 +40,7 @@ Examples:
 Notes:
   - Either [agent-id] or --agent-config-file is required.
   - With streaming enabled, stdout contains rendered model/tool progress.
-  - With --no-stream, stdout is the gateway JSON response.`)
+  - With --no-stream, stdout is gateway JSON enriched with response.message.content when stored events are available.`)
     .action(async (agentID: string | undefined, messageParts: string[] | undefined, options: ChatRunOptions) => {
       const client = await AgentGatewayClient.fromConfig();
       if (!agentID && !options.agentConfigFile) {
@@ -64,7 +64,7 @@ Notes:
         }
         return;
       }
-      printJSON(await client.post("/v1/chat/completions", payload));
+      printJSON(await completeNonStreamingChatResponse(client, await client.post("/v1/chat/completions", payload)));
     });
 
   cmd.command("get").description("Get chat run metadata and current state").argument("<chat-id>", "chat/run UUID").action(async (chatID: string) => {
@@ -72,15 +72,16 @@ Notes:
     printJSON(await client.get(`/v1/chats/${encodeURIComponent(chatID)}`));
   });
 
-  cmd.command("events").description("List stored chat events as JSON").argument("<chat-id>", "chat/run UUID").option("--after-seq <number>", "return events after this sequence", "0").option("--limit <number>", "maximum events to return", "100").addHelpText("after", `
+  cmd.command("events").description("List stored chat events as JSON").argument("<chat-id>", "chat/run UUID").option("--after-seq <number>", "return events after this sequence", "0").option("--limit <number>", "maximum events to return", "1000").addHelpText("after", `
 
 Example:
-  seaagent chat events <chat-id> --after-seq 12 --limit 100`).action(async (chatID: string, options) => {
+  seaagent chat events <chat-id> --after-seq 12 --limit 1000`).action(async (chatID: string, options) => {
     const client = await AgentGatewayClient.fromConfig();
-    printJSON(await client.get(`/v1/chats/${encodeURIComponent(chatID)}/events`, {
-      after_seq: options.afterSeq,
-      limit: options.limit,
-    }));
+    const afterSeq = parseNonNegativeInteger(options.afterSeq, "after-seq");
+    const limit = parsePositiveInteger(options.limit, "limit");
+    const response = await getChatEvents(client, chatID, afterSeq, limit);
+    warnIfChatEventsTruncated(response, limit, afterSeq);
+    printJSON(response);
   });
 
   cmd.command("stream")
@@ -147,6 +148,163 @@ type ChatStreamRenderer = {
   throwIfFailed: () => void;
   end: () => void;
 };
+
+const CHAT_EVENTS_PAGE_LIMIT = 1000;
+
+async function completeNonStreamingChatResponse(client: AgentGatewayClient, response: unknown): Promise<unknown> {
+  const runID = findRunID(response);
+  if (!runID) {
+    return response;
+  }
+
+  let events: ChatStreamEvent[];
+  try {
+    events = await getAllChatEvents(client, runID);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`[warning] could not load chat events for ${runID}; --no-stream response was not enriched: ${message}\n`);
+    return response;
+  }
+  const content = collectAssistantText(events);
+  if (!content) {
+    return response;
+  }
+
+  const target = responseObjectWithRunID(response, runID);
+  if (!target) {
+    return response;
+  }
+  const message = ensureObjectProperty(ensureObjectProperty(target, "response"), "message");
+  message.content = content;
+  return response;
+}
+
+async function getAllChatEvents(client: AgentGatewayClient, chatID: string): Promise<ChatStreamEvent[]> {
+  const events: ChatStreamEvent[] = [];
+  let afterSeq = 0;
+
+  while (true) {
+    const response = await getChatEvents(client, chatID, afterSeq, CHAT_EVENTS_PAGE_LIMIT);
+    events.push(...storedEventsFromResponse(response));
+    const items = itemsFromChatEventsResponse(response);
+    if (items.length < CHAT_EVENTS_PAGE_LIMIT) {
+      return events;
+    }
+
+    const nextAfterSeq = lastReturnedEventSeq(response, afterSeq);
+    if (nextAfterSeq <= afterSeq) {
+      process.stderr.write(`[warning] stopped paging chat events for ${chatID}; could not determine the next --after-seq value\n`);
+      return events;
+    }
+    afterSeq = nextAfterSeq;
+  }
+}
+
+async function getChatEvents(client: AgentGatewayClient, chatID: string, afterSeq: number, limit: number): Promise<unknown> {
+  return client.get(`/v1/chats/${encodeURIComponent(chatID)}/events`, {
+    after_seq: afterSeq,
+    limit,
+  });
+}
+
+function warnIfChatEventsTruncated(response: unknown, limit: number, afterSeq: number): void {
+  const items = itemsFromChatEventsResponse(response);
+  if (items.length !== limit) {
+    return;
+  }
+  const nextAfterSeq = lastReturnedEventSeq(response, afterSeq);
+  process.stderr.write(`[warning] returned exactly --limit (${limit}) events; use --after-seq ${nextAfterSeq} for more\n`);
+}
+
+function storedEventsFromResponse(response: unknown): ChatStreamEvent[] {
+  const events: ChatStreamEvent[] = [];
+  for (const item of itemsFromChatEventsResponse(response)) {
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+    const record = item as Record<string, unknown>;
+    const seq = parseOptionalSeq(record.seq);
+    if (typeof record.raw_sse === "string") {
+      for (const event of parseSSE(record.raw_sse)) {
+        events.push({ ...event, id: event.id ?? seq });
+      }
+      continue;
+    }
+    if (typeof record.event === "string") {
+      events.push({ event: record.event, data: record.data, id: seq });
+    }
+  }
+  return events;
+}
+
+function collectAssistantText(events: ChatStreamEvent[]): string {
+  let text = "";
+  let wroteText = false;
+  for (const event of events) {
+    const chunk = textFromStreamEvent(event, wroteText);
+    if (!chunk) {
+      continue;
+    }
+    text += chunk;
+    wroteText = true;
+  }
+  return text;
+}
+
+function itemsFromChatEventsResponse(response: unknown): unknown[] {
+  const data = objectField(response, "data");
+  const items = Array.isArray(objectField(response, "items"))
+    ? objectField(response, "items")
+    : objectField(data, "items");
+  return Array.isArray(items) ? items : [];
+}
+
+function lastReturnedEventSeq(response: unknown, fallbackAfterSeq: number): number {
+  const items = itemsFromChatEventsResponse(response);
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const item = items[index];
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+    const seq = parseOptionalSeq((item as Record<string, unknown>).seq);
+    if (seq !== undefined) {
+      return seq;
+    }
+  }
+  return fallbackAfterSeq + items.length;
+}
+
+function findRunID(value: unknown): string {
+  if (!value || typeof value !== "object") {
+    return "";
+  }
+  const direct = stringField(value, "run_id");
+  if (direct) {
+    return direct;
+  }
+  return findRunID(objectField(value, "data")) || findRunID(objectField(value, "response"));
+}
+
+function responseObjectWithRunID(value: unknown, runID: string): Record<string, unknown> | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+  const object = value as Record<string, unknown>;
+  if (stringField(object, "run_id") === runID) {
+    return object;
+  }
+  return responseObjectWithRunID(object.data, runID) || responseObjectWithRunID(object.response, runID);
+}
+
+function ensureObjectProperty(object: Record<string, unknown>, field: string): Record<string, unknown> {
+  const value = object[field];
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  const next: Record<string, unknown> = {};
+  object[field] = next;
+  return next;
+}
 
 async function runChatStreamWithResume(client: AgentGatewayClient, payload: unknown, useWebSocket: boolean, renderer: ChatStreamRenderer, options: StreamRetryOptions): Promise<void> {
   let initialRequest = true;
@@ -528,6 +686,14 @@ function parseNonNegativeInteger(value: string | number, name: string): number {
   const parsed = parseInteger(value, name);
   if (parsed < 0) {
     throw new Error(`--${name} must be 0 or greater`);
+  }
+  return parsed;
+}
+
+function parsePositiveInteger(value: string | number, name: string): number {
+  const parsed = parseInteger(value, name);
+  if (parsed <= 0) {
+    throw new Error(`--${name} must be greater than 0`);
   }
   return parsed;
 }

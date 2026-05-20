@@ -4,6 +4,7 @@ import { confirmRegistryMutation } from "../lib/confirmation.js";
 import { readPayload } from "../lib/files.js";
 import { addHelpText, payloadFileHelp } from "../lib/help.js";
 import { printJSON, printTable } from "../lib/output.js";
+import { withRegisterErrorHint } from "../lib/registry-hints.js";
 
 export function agentCommand(): Command {
   const cmd = addHelpText(new Command("agent").description("Register and inspect agents"), `
@@ -19,6 +20,7 @@ ${payloadFileHelp}
 Examples:
   seaagent agent list --status active
   seaagent agent register -f examples/agent-web.json
+  seaagent agent get <agent-id>
   seaagent agent capabilities <agent-id>
   seaagent chat run <agent-id> "hello"
 `);
@@ -47,7 +49,7 @@ Payload notes:
         payloadPath: options.file,
         resource: "agent",
       });
-      printJSON(await client.post("/v1/agents/register", payload));
+      printJSON(await withRegisterErrorHint("agent", "examples/agent-web.json", () => client.post("/v1/agents/register", payload)));
     });
 
   cmd
@@ -108,6 +110,15 @@ Examples:
         offset: options.offset,
       });
       printTable((response as any).data ?? response);
+    });
+
+  cmd
+    .command("get")
+    .description("Get one agent by immutable UUID")
+    .argument("<agent-id>", "agent UUID")
+    .action(async (agentID: string) => {
+      const client = await AgentGatewayClient.fromConfig();
+      printJSON(await client.get(`/v1/agents/${encodeURIComponent(agentID)}`));
     });
 
   cmd

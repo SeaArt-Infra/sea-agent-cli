@@ -255,7 +255,66 @@ function errorMessageFromResponse(text: string): string {
   } catch {
     parsed = {};
   }
-  return typeof parsed === "object" && parsed && "error" in parsed ? String((parsed as any).error) : text;
+  if (!parsed || typeof parsed !== "object") {
+    return text;
+  }
+  const object = parsed as Record<string, unknown>;
+  const parts = [
+    stringField(object, "error"),
+    stringField(object, "message"),
+    stringField(object, "detail"),
+    formatDetails(object.details),
+    formatDetails(object.errors),
+  ].filter(Boolean);
+  if (parts.length === 0) {
+    return text;
+  }
+  return Array.from(new Set(parts)).join("; ");
+}
+
+function stringField(object: Record<string, unknown>, field: string): string {
+  const value = object[field];
+  return typeof value === "string" ? value : "";
+}
+
+function formatDetails(value: unknown): string {
+  if (value === undefined || value === null || value === "") {
+    return "";
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    const parts = value.map(formatDetails).filter(Boolean);
+    return parts.join("; ");
+  }
+  if (typeof value === "object") {
+    const object = value as Record<string, unknown>;
+    const message = stringField(object, "message") || stringField(object, "msg") || stringField(object, "error") || stringField(object, "detail");
+    const field = stringField(object, "field") || stringField(object, "path") || formatPath(object.loc);
+    if (message && field) {
+      return `${field}: ${message}`;
+    }
+    if (message) {
+      return message;
+    }
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
+function formatPath(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (!Array.isArray(value)) {
+    return "";
+  }
+  return value.map((part) => String(part)).filter(Boolean).join(".");
 }
 
 function parseJSONResponse(text: string, url: string): unknown {

@@ -4,6 +4,7 @@ import { confirmRegistryMutation } from "../lib/confirmation.js";
 import { readPayload } from "../lib/files.js";
 import { addHelpText, commonListHelp, payloadFileHelp } from "../lib/help.js";
 import { printJSON, printTable } from "../lib/output.js";
+import { warnProviderNormalized, withRegisterErrorHint } from "../lib/registry-hints.js";
 
 export function toolCommand(): Command {
   const cmd = addHelpText(new Command("tool").description("Register and inspect tools used by skills"), `
@@ -33,7 +34,11 @@ Examples:
   seaagent tool register --file payloads/tool.yaml
 
 The payload should describe runtime behavior. Avoid display-only metadata unless
-the target gateway deployment still requires it.`)
+the target gateway deployment still requires it.
+
+Payload notes:
+  - provider may be normalized by the gateway to an internal provider UUID.
+    Use the returned provider value for later --provider filters.`)
     .action(async (options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
       const payload = await readPayload(options.file);
@@ -44,7 +49,9 @@ the target gateway deployment still requires it.`)
         payloadPath: options.file,
         resource: "tool",
       });
-      printJSON(await client.post("/v1/tools/register", payload));
+      const response = await withRegisterErrorHint("tool", "examples/tool-web-fetch.json", () => client.post("/v1/tools/register", payload));
+      warnProviderNormalized("tool", payload, response);
+      printJSON(response);
     });
 
   const list = async (options: any) => {

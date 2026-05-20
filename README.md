@@ -53,6 +53,7 @@ seaagent agent register -f examples/agent-sandbox.json
 seaagent agent update <agent-id> -f agent-update.json
 seaagent agent delete <agent-id>
 seaagent agent list
+seaagent agent get 33333333-3333-4333-8333-333333333333
 seaagent agent capabilities 33333333-3333-4333-8333-333333333333
 
 seaagent hook register -f examples/hook.json
