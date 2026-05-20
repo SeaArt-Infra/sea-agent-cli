@@ -1,14 +1,31 @@
 import { Command } from "commander";
 import { getConfigPath, loadConfig, saveConfig } from "../lib/config-store.js";
+import { addHelpText } from "../lib/help.js";
 import { printJSON } from "../lib/output.js";
 
 export function configCommand(): Command {
-  const cmd = new Command("config").description("Manage seaagent config");
+  const cmd = addHelpText(new Command("config").description("Manage seaagent config"), `
+Config file:
+  ~/.seaagent/config.yaml
+
+Supported keys:
+  endpoint   Base URL for agent-gateway, for example http://127.0.0.1:8080
+  api-key    Sent as Authorization: Bearer <api-key>
+  user-id    Sent as X-User-ID for ownership-sensitive registry operations
+
+Examples:
+  seaagent config set endpoint http://127.0.0.1:8080
+  seaagent config set api-key sa-xxxxxxxx
+  seaagent config set user-id production-line-123
+  seaagent config get
+  seaagent config path
+`);
 
   cmd
     .command("set")
+    .description("Set one config value in ~/.seaagent/config.yaml")
     .argument("<key>", "endpoint, api-key, or user-id")
-    .argument("<value>")
+    .argument("<value>", "value to store")
     .action(async (key: string, value: string) => {
       const config = await loadConfig();
       if (key === "endpoint") {
@@ -24,7 +41,7 @@ export function configCommand(): Command {
       console.log(`saved ${key} to ${getConfigPath()}`);
     });
 
-  cmd.command("get").action(async () => {
+  cmd.command("get").description("Print config as JSON, masking apiKey").action(async () => {
     const config = await loadConfig();
     printJSON({
       ...config,
@@ -32,7 +49,7 @@ export function configCommand(): Command {
     });
   });
 
-  cmd.command("path").action(() => {
+  cmd.command("path").description("Print the config file path").action(() => {
     console.log(getConfigPath());
   });
 

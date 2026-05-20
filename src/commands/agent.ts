@@ -2,15 +2,41 @@ import { Command } from "commander";
 import { AgentGatewayClient } from "../lib/client.js";
 import { confirmRegistryMutation } from "../lib/confirmation.js";
 import { readPayload } from "../lib/files.js";
+import { addHelpText, payloadFileHelp } from "../lib/help.js";
 import { printJSON, printTable } from "../lib/output.js";
 
 export function agentCommand(): Command {
-  const cmd = new Command("agent").description("Register and inspect agents");
+  const cmd = addHelpText(new Command("agent").description("Register and inspect agents"), `
+Agents bind skills and runtime configuration into runnable gateway resources.
+Use immutable agent UUIDs returned by the gateway for update/delete/capabilities/chat.
+
+Agent categories:
+  fabric    Normal Fabric scheduler pool
+  seaactor  SeaActor scheduler pool
+
+${payloadFileHelp}
+
+Examples:
+  seaagent agent list --status active
+  seaagent agent register -f examples/agent-web.json
+  seaagent agent capabilities <agent-id>
+  seaagent chat run <agent-id> "hello"
+`);
 
   cmd
     .command("register")
     .description("Register an agent via /v1/agents/register")
     .requiredOption("-f, --file <path>", "JSON/YAML request file")
+    .addHelpText("after", `
+
+Examples:
+  seaagent agent register -f examples/agent-web.json
+  seaagent agent register -f examples/agent-sandbox.json
+
+Payload notes:
+  - category is required by current gateway deployments: fabric or seaactor.
+  - Do not send agent_key for new registrations; gateway returns an immutable UUID.
+  - Runtime settings belong in config/agent_config.`)
     .action(async (options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
       const payload = await readPayload(options.file);
@@ -27,8 +53,12 @@ export function agentCommand(): Command {
   cmd
     .command("update")
     .description("Update an agent via /v1/agents/{agent-id}")
-    .argument("<agent-id>")
+    .argument("<agent-id>", "agent UUID")
     .requiredOption("-f, --file <path>", "JSON/YAML request file")
+    .addHelpText("after", `
+
+Example:
+  seaagent agent update <agent-id> -f payloads/agent-update.json`)
     .action(async (agentID: string, options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
       const payload = await readPayload(options.file);
@@ -46,7 +76,7 @@ export function agentCommand(): Command {
   cmd
     .command("delete")
     .description("Delete an agent via /v1/agents/{agent-id}")
-    .argument("<agent-id>")
+    .argument("<agent-id>", "agent UUID")
     .action(async (agentID: string) => {
       const client = await AgentGatewayClient.fromConfig();
       printJSON(await client.delete(`/v1/agents/${encodeURIComponent(agentID)}`));
@@ -54,12 +84,19 @@ export function agentCommand(): Command {
 
   cmd
     .command("list")
-    .option("--search <value>")
-    .option("--status <value>")
-    .option("--owner-id <value>")
-    .option("--category <value>")
+    .description("List agents")
+    .option("--search <value>", "search text")
+    .option("--status <value>", "draft, active, deprecated, disabled, or deleted")
+    .option("--owner-id <value>", "owner ID")
+    .option("--category <fabric|seaactor>", "scheduler category")
     .option("--limit <number>", "page size", "20")
     .option("--offset <number>", "page offset", "0")
+    .addHelpText("after", `
+
+Examples:
+  seaagent agent list --status active
+  seaagent agent list --owner-id production-line-123
+  seaagent agent list --category fabric --search web --limit 50`)
     .action(async (options) => {
       const client = await AgentGatewayClient.fromConfig();
       const response = await client.get("/v1/agents", {
@@ -75,7 +112,14 @@ export function agentCommand(): Command {
 
   cmd
     .command("capabilities")
-    .argument("<agent-id>")
+    .description("Show resolved skills and tools available to an agent")
+    .argument("<agent-id>", "agent UUID")
+    .addHelpText("after", `
+
+Run this after agent or skill changes to verify what the worker will see.
+
+Example:
+  seaagent agent capabilities <agent-id>`)
     .action(async (agentID: string) => {
       const client = await AgentGatewayClient.fromConfig();
       printJSON(await client.get(`/v1/agents/${encodeURIComponent(agentID)}/capabilities`));

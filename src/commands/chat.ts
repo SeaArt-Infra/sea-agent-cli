@@ -1,20 +1,46 @@
 import { Command } from "commander";
 import { AgentGatewayClient } from "../lib/client.js";
 import { readPayload } from "../lib/files.js";
+import { addHelpText } from "../lib/help.js";
 import { printJSON } from "../lib/output.js";
 
 export function chatCommand(): Command {
-  const cmd = new Command("chat").description("Run and manage chats");
+  const cmd = addHelpText(new Command("chat").description("Run and manage chats"), `
+Chat can run against a registered agent UUID or an inline runtime agent_config file.
+Streaming is enabled by default. Use --no-stream when another agent needs raw JSON.
+
+Examples:
+  seaagent chat run <agent-id> "hello"
+  seaagent chat run --no-stream <agent-id> "return JSON"
+  seaagent chat run --ws <agent-id> "stream over WebSocket"
+  seaagent chat run --agent-config-file examples/runtime-agent-config.json "Fetch https://example.com"
+  seaagent chat events <chat-id> --after-seq 12
+  seaagent chat stream <chat-id> --after-seq 12
+`);
 
   cmd
     .command("run")
-    .argument("[agent-id]")
-    .argument("[message...]")
+    .description("Create a chat completion and optionally stream events")
+    .argument("[agent-id]", "registered agent UUID; optional when --agent-config-file is used")
+    .argument("[message...]", "user message text")
     .option("-f, --agent-config-file <path>", "JSON/YAML runtime agent_config file")
     .option("--no-stream", "disable streaming")
     .option("--ws", "use WebSocket streaming")
     .option("--stream-retries <number>", "stream reconnect attempts after interruption; -1 means unlimited", "-1")
     .option("--retry-delay-ms <number>", "delay before reconnecting an interrupted stream", "1000")
+    .addHelpText("after", `
+
+Examples:
+  seaagent chat run <agent-id> "Search recent AI news"
+  seaagent chat run --no-stream <agent-id> "Use one sentence"
+  seaagent chat run --ws <agent-id> "Stream with WebSocket"
+  seaagent chat run --stream-retries 5 <agent-id> "Reconnect at most five times"
+  seaagent chat run --agent-config-file examples/runtime-agent-config.json "Fetch https://example.com"
+
+Notes:
+  - Either [agent-id] or --agent-config-file is required.
+  - With streaming enabled, stdout contains rendered model/tool progress.
+  - With --no-stream, stdout is the gateway JSON response.`)
     .action(async (agentID: string | undefined, messageParts: string[] | undefined, options: ChatRunOptions) => {
       const client = await AgentGatewayClient.fromConfig();
       if (!agentID && !options.agentConfigFile) {
@@ -41,12 +67,15 @@ export function chatCommand(): Command {
       printJSON(await client.post("/v1/chat/completions", payload));
     });
 
-  cmd.command("get").argument("<chat-id>").action(async (chatID: string) => {
+  cmd.command("get").description("Get chat run metadata and current state").argument("<chat-id>", "chat/run UUID").action(async (chatID: string) => {
     const client = await AgentGatewayClient.fromConfig();
     printJSON(await client.get(`/v1/chats/${encodeURIComponent(chatID)}`));
   });
 
-  cmd.command("events").argument("<chat-id>").option("--after-seq <number>", "after sequence", "0").option("--limit <number>", "limit", "100").action(async (chatID: string, options) => {
+  cmd.command("events").description("List stored chat events as JSON").argument("<chat-id>", "chat/run UUID").option("--after-seq <number>", "return events after this sequence", "0").option("--limit <number>", "maximum events to return", "100").addHelpText("after", `
+
+Example:
+  seaagent chat events <chat-id> --after-seq 12 --limit 100`).action(async (chatID: string, options) => {
     const client = await AgentGatewayClient.fromConfig();
     printJSON(await client.get(`/v1/chats/${encodeURIComponent(chatID)}/events`, {
       after_seq: options.afterSeq,
@@ -55,11 +84,18 @@ export function chatCommand(): Command {
   });
 
   cmd.command("stream")
-    .argument("<chat-id>")
-    .option("--after-seq <number>", "after sequence", "0")
+    .description("Resume streaming an existing chat")
+    .argument("<chat-id>", "chat/run UUID")
+    .option("--after-seq <number>", "resume after this event sequence", "0")
     .option("--ws", "use WebSocket streaming")
     .option("--stream-retries <number>", "stream reconnect attempts after interruption; -1 means unlimited", "-1")
     .option("--retry-delay-ms <number>", "delay before reconnecting an interrupted stream", "1000")
+    .addHelpText("after", `
+
+Examples:
+  seaagent chat stream <chat-id>
+  seaagent chat stream <chat-id> --after-seq 12
+  seaagent chat stream --ws <chat-id> --after-seq 12`)
     .action(async (chatID: string, options: ChatStreamOptions) => {
       const client = await AgentGatewayClient.fromConfig();
       const renderer = createChatStreamRenderer(chatID, parseNonNegativeInteger(options.afterSeq, "after-seq"));
@@ -70,7 +106,7 @@ export function chatCommand(): Command {
       }
     });
 
-  cmd.command("cancel").argument("<chat-id>").action(async (chatID: string) => {
+  cmd.command("cancel").description("Cancel a running chat").argument("<chat-id>", "chat/run UUID").action(async (chatID: string) => {
     const client = await AgentGatewayClient.fromConfig();
     printJSON(await client.post(`/v1/chats/${encodeURIComponent(chatID)}/cancel`));
   });

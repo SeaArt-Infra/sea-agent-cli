@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { writeFile } from "node:fs/promises";
 import { AgentGatewayClient } from "../lib/client.js";
+import { addHelpText } from "../lib/help.js";
 import { printJSON } from "../lib/output.js";
 
 export function gameCommand(): Command {
@@ -12,18 +13,36 @@ export function sandboxCommand(): Command {
 }
 
 function sandboxRunCommand(name: string, basePath: string, description: string): Command {
-  const cmd = new Command(name).description(description);
+  const cmd = addHelpText(new Command(name).description(description), `
+Sandbox commands manage remote workspace runs. Use 'sandbox' for new workflows.
+The 'game' command is a legacy alias that uses /v1/game/runs routes.
+
+Examples:
+  seaagent ${name} create --prompt "Create a small React game" --sandbox-template react-game --preview-port 3000
+  seaagent ${name} stream <run-id>
+  seaagent ${name} logs <run-id> --limit 100
+  seaagent ${name} files <run-id> --path /agent-workspace
+  seaagent ${name} read <run-id> --path /agent-workspace/package.json
+  seaagent ${name} archive <run-id> --path /agent-workspace -o workspace.tgz
+  seaagent ${name} command <run-id> -c "npm test" --cwd /agent-workspace --timeout 60
+`);
 
   cmd
     .command("create")
     .description(`Create a sandbox run via ${basePath}`)
-    .requiredOption("--prompt <text>", "run prompt")
+    .requiredOption("--prompt <text>", "task prompt for the sandbox worker")
     .option("--template-id <id>", "sandbox template id")
-    .option("--sandbox-template <id>", "sandbox template alias")
-    .option("--preview-port <number>", "preview port")
+    .option("--sandbox-template <id>", "sandbox template alias, for example react-game")
+    .option("--preview-port <number>", "preview port exposed by the generated app")
     .option("--workspace-root <path>", "workspace root", "/agent-workspace")
     .option("--user-id <id>", "user id")
     .option("--conversation-id <id>", "conversation id")
+    .addHelpText("after", `
+
+Examples:
+  seaagent ${name} create --prompt "Create a small React game"
+  seaagent ${name} create --prompt "Build a landing page" --sandbox-template react-game --preview-port 3000
+  seaagent ${name} create --prompt "Continue this task" --conversation-id conv_123 --user-id user_123`)
     .action(async (options) => {
       const client = await AgentGatewayClient.fromConfig();
       printJSON(await client.post(basePath, {
@@ -37,15 +56,16 @@ function sandboxRunCommand(name: string, basePath: string, description: string):
       }));
     });
 
-  cmd.command("get").argument("<run-id>").action(async (runID: string) => {
+  cmd.command("get").description("Get sandbox run metadata and status").argument("<run-id>", "sandbox run UUID").action(async (runID: string) => {
     const client = await AgentGatewayClient.fromConfig();
     printJSON(await client.get(runPath(basePath, runID)));
   });
 
   cmd.command("events")
-    .argument("<run-id>")
-    .option("--after-seq <number>", "after sequence", "0")
-    .option("--limit <number>", "limit", "100")
+    .description("List stored sandbox events as JSON")
+    .argument("<run-id>", "sandbox run UUID")
+    .option("--after-seq <number>", "return events after this sequence", "0")
+    .option("--limit <number>", "maximum events to return", "100")
     .action(async (runID: string, options) => {
       const client = await AgentGatewayClient.fromConfig();
       printJSON(await client.get(`${runPath(basePath, runID)}/events`, {
@@ -55,8 +75,9 @@ function sandboxRunCommand(name: string, basePath: string, description: string):
     });
 
   cmd.command("stream")
-    .argument("<run-id>")
-    .option("--after-seq <number>", "after sequence", "0")
+    .description("Stream sandbox events")
+    .argument("<run-id>", "sandbox run UUID")
+    .option("--after-seq <number>", "resume after this event sequence", "0")
     .action(async (runID: string, options) => {
       const client = await AgentGatewayClient.fromConfig();
       await client.getStream(`${runPath(basePath, runID)}/stream`, {
@@ -65,8 +86,9 @@ function sandboxRunCommand(name: string, basePath: string, description: string):
     });
 
   cmd.command("logs")
-    .argument("<run-id>")
-    .option("--limit <number>", "limit", "100")
+    .description("Get sandbox logs")
+    .argument("<run-id>", "sandbox run UUID")
+    .option("--limit <number>", "maximum log lines/items to return", "100")
     .action(async (runID: string, options) => {
       const client = await AgentGatewayClient.fromConfig();
       printJSON(await client.get(`${runPath(basePath, runID)}/logs`, {
@@ -75,7 +97,8 @@ function sandboxRunCommand(name: string, basePath: string, description: string):
     });
 
   cmd.command("files")
-    .argument("<run-id>")
+    .description("List files under a sandbox workspace path")
+    .argument("<run-id>", "sandbox run UUID")
     .option("--path <path>", "workspace path")
     .action(async (runID: string, options) => {
       const client = await AgentGatewayClient.fromConfig();
@@ -85,7 +108,8 @@ function sandboxRunCommand(name: string, basePath: string, description: string):
     });
 
   cmd.command("read")
-    .argument("<run-id>")
+    .description("Read one file from the sandbox workspace")
+    .argument("<run-id>", "sandbox run UUID")
     .requiredOption("--path <path>", "workspace file path")
     .action(async (runID: string, options) => {
       const client = await AgentGatewayClient.fromConfig();
@@ -95,9 +119,15 @@ function sandboxRunCommand(name: string, basePath: string, description: string):
     });
 
   cmd.command("archive")
-    .argument("<run-id>")
+    .description("Download a workspace path as an archive")
+    .argument("<run-id>", "sandbox run UUID")
     .requiredOption("--path <path>", "workspace path to archive")
     .option("-o, --output <path>", "write archive to file instead of stdout")
+    .addHelpText("after", `
+
+Examples:
+  seaagent ${name} archive <run-id> --path /agent-workspace -o workspace.tgz
+  seaagent ${name} archive <run-id> --path /agent-workspace/src > src.tgz`)
     .action(async (runID: string, options) => {
       const client = await AgentGatewayClient.fromConfig();
       const data = await client.getBytes(`${runPath(basePath, runID)}/files/archive`, {
@@ -112,11 +142,17 @@ function sandboxRunCommand(name: string, basePath: string, description: string):
     });
 
   cmd.command("command")
-    .argument("<run-id>")
+    .description("Run a shell command inside the sandbox workspace")
+    .argument("<run-id>", "sandbox run UUID")
     .requiredOption("-c, --command <command>", "shell command to run inside the sandbox workspace")
     .option("--cwd <path>", "working directory")
     .option("--timeout <seconds>", "command timeout in seconds")
     .option("--env <key=value...>", "environment variables")
+    .addHelpText("after", `
+
+Examples:
+  seaagent ${name} command <run-id> -c "pwd && ls" --cwd /agent-workspace
+  seaagent ${name} command <run-id> -c "npm test" --timeout 120 --env NODE_ENV=test`)
     .action(async (runID: string, options) => {
       const client = await AgentGatewayClient.fromConfig();
       printJSON(await client.post(`${runPath(basePath, runID)}/commands`, {
@@ -127,17 +163,17 @@ function sandboxRunCommand(name: string, basePath: string, description: string):
       }));
     });
 
-  cmd.command("refresh").argument("<run-id>").action(async (runID: string) => {
+  cmd.command("refresh").description("Refresh sandbox run state from the worker").argument("<run-id>", "sandbox run UUID").action(async (runID: string) => {
     const client = await AgentGatewayClient.fromConfig();
     printJSON(await client.post(`${runPath(basePath, runID)}/refresh`));
   });
 
-  cmd.command("resume").argument("<run-id>").action(async (runID: string) => {
+  cmd.command("resume").description("Resume a paused or interrupted sandbox run").argument("<run-id>", "sandbox run UUID").action(async (runID: string) => {
     const client = await AgentGatewayClient.fromConfig();
     printJSON(await client.post(`${runPath(basePath, runID)}/resume`));
   });
 
-  cmd.command("delete").argument("<run-id>").action(async (runID: string) => {
+  cmd.command("delete").description("Delete a sandbox run").argument("<run-id>", "sandbox run UUID").action(async (runID: string) => {
     const client = await AgentGatewayClient.fromConfig();
     printJSON(await client.delete(runPath(basePath, runID)));
   });
