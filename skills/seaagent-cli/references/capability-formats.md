@@ -74,7 +74,7 @@ Stable identifiers:
 
 - Tool resource id: gateway-generated UUID.
 - Skill resource id: gateway-generated UUID.
-- Skill registry refs and Skill manifest `id` use the gateway UUID; user-provided manifest IDs are overwritten on persistence.
+- Skill registry refs use the gateway UUID. `skills.manifest` no longer stores duplicate `id`, `name`, `provider`, or display fields.
 - Agent resource id: gateway-generated UUID.
 - Names should be stable `snake_case`.
 - Registry identity is always the gateway UUID. Do not send removed `tool_key`, `skill_key`, or `agent_key` fields; keep `provider`, `name`, and `version` canonical for display/runtime metadata. Do not keep recovery/import suffixes such as `_restored`, `_backup`, `_copy`, timestamps, or random migration markers in `id` or `name`.
@@ -231,10 +231,7 @@ Also usable with `skill update <id> -f file` if the payload does not include low
 ```json
 {
   "name": "skill_name",
-  "version": "v1",
-  "display_name": "Skill Name",
   "description": "What the skill helps with.",
-  "category": "general",
   "provider": "provider",
   "required_tools": [],
   "optional_tools": [],
@@ -245,11 +242,6 @@ Also usable with `skill update <id> -f file` if the payload does not include low
     "max_turns": 20,
     "timeout": 600
   },
-  "triggers": {
-    "keywords": ["keyword"],
-    "intent": "intent_name"
-  },
-  "tags": [],
   "public": false,
   "enabled": true
 }
@@ -258,10 +250,10 @@ Also usable with `skill update <id> -f file` if the payload does not include low
 Rules:
 
 - `name`, `description`, and `instruction` are required.
-- `version` defaults to `v1`; `provider` defaults to `internal`; `display_name` defaults to `name`; `category` defaults to `general`; gateway returns a UUID `id` from `provider:name:version`.
+- `provider` defaults to `internal`; gateway returns a UUID `id`.
 - The gateway may normalize `provider` to an internal provider UUID; use the returned provider value for later `--provider` filters.
-- The gateway builds current `skills.manifest` from this payload.
-- `display_name`, `category`, `tags`, and `public` are compatibility/display fields. Prefer omitting them in new slim payloads when the target gateway supports it; store display metadata in server instead.
+- The gateway builds current `skills.manifest` only from `instruction`, `config`, `required_tools`, and `optional_tools`.
+- Do not send manifest/display fields that duplicate outer Skill data or server-owned display data: `id`, `name`, `version`, `display_name`, `description`, `category`, `provider`, `tags`, and `triggers`.
 - `required_tools` and `optional_tools` must be arrays when present.
 - A string tool ref becomes `{ "type": "http", "ref": "<value>" }`.
 - Object refs use `{"type":"builtin|http|http_batch|mcp","ref":"...","server":"..."}`. `server` is required for `type: "mcp"`.
@@ -284,26 +276,17 @@ Use with `skill register` to create if the payload includes low-level trigger fi
   "provider": "provider",
   "description": "What the skill helps with.",
   "manifest": {
-    "id": "11111111-1111-4111-8111-111111111111",
-    "name": "skill_name",
-    "version": "v1",
-    "display_name": "Skill Name",
-    "description": "What the skill helps with.",
-    "category": "general",
-    "provider": "provider",
     "required_tools": [],
     "optional_tools": [],
     "instruction": "Detailed operating instructions for the agent.",
-    "config": {},
-    "triggers": {},
-    "tags": []
+    "config": {}
   },
   "public": false,
   "status": "active"
 }
 ```
 
-Create and update use the provider bound by the gateway request identity. `manifest.name` and `manifest.instruction` must be non-empty. Skill metadata is stored as `{}`. Low-level `status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`.
+Create and update use outer Skill fields for identity and display. `manifest.instruction` must be non-empty. Skill metadata is stored as `{}`. Low-level `status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`.
 
 ## Agent Concise Register
 
