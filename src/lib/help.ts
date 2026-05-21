@@ -8,7 +8,7 @@ export const commonListHelp = `Common filters:
   --search <value>      Match resource names, descriptions, or provider-owned metadata
   --status <value>      draft | active | deprecated | disabled | deleted
   --provider <value>    Provider namespace for tools/skills
-  --limit <number>      Page size, normally 1..100
+  --limit <number>      Page size, normally 1..200
   --offset <number>     Zero-based page offset`;
 
 export const payloadFileHelp = `Payload files:

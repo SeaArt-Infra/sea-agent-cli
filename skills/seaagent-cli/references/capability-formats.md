@@ -87,7 +87,7 @@ Statuses:
 
 List pagination:
 
-- `limit` defaults to `20` when omitted, `<= 0`, or `> 100`.
+- `limit` defaults to `20` when omitted or `<= 0`; values `> 200` are capped to `200`.
 - `offset` defaults to `0` when omitted or negative.
 - `catalog list` also caps the internal fetch window at `200`, then applies the normalized page size.
 

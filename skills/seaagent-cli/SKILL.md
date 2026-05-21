@@ -88,7 +88,7 @@ Command argument conventions:
 
 - `<tool-id>`, `<skill-id>`, and `<agent-id>` must be the immutable UUID returned by the gateway.
 - `--status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`; use `active` for normal discovery.
-- List-command `--limit` is bounded by the gateway to `1..100`; `chat events` defaults to `1000` and warns when more pages may exist.
+- List-command `--limit` is bounded by the gateway to `1..200`; `chat events` defaults to `1000` and warns when more pages may exist.
 - `--offset` must be `0` or greater; negative values are normalized to `0`.
 - Tool/Skill `--public` is a compatibility filter while schema slimming is in progress; Skill lists no longer expose source-kind filtering.
 - Agent `category` is not a display taxonomy. It is the resource scheduling class used by gateway to map runs to Scheduler pools.
