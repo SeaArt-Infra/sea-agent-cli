@@ -52,7 +52,6 @@ Payload notes:
 Minimal payload:
   {
     "name": "weather_assistant",
-    "version": "v1",
     "category": "fabric",
     "model": {"default": "claude-sonnet-4-6-seawork"},
     "system_prompt": "You are a concise assistant.",

@@ -77,7 +77,7 @@ Stable identifiers:
 - Skill registry refs use the gateway UUID. `skills.manifest` no longer stores duplicate `id`, `name`, `provider`, or display fields.
 - Agent resource id: gateway-generated UUID.
 - Names should be stable `snake_case`.
-- Registry identity is always the gateway UUID. Do not send removed `tool_key`, `skill_key`, or `agent_key` fields; keep `provider`, `name`, and `version` canonical for display/runtime metadata. Do not keep recovery/import suffixes such as `_restored`, `_backup`, `_copy`, timestamps, or random migration markers in `id` or `name`.
+- Registry identity is always the gateway UUID. Do not send removed `tool_key`, `skill_key`, `agent_key`, or request-owned `version` fields; keep `provider` and `name` canonical for display/runtime metadata. Do not keep recovery/import suffixes such as `_restored`, `_backup`, `_copy`, timestamps, or random migration markers in `id` or `name`.
 
 Statuses:
 
@@ -129,7 +129,6 @@ Also usable with `tool update <id> -f file` if the payload does not include low-
 {
   "provider": "provider",
   "name": "tool_name",
-  "version": "v1",
   "runtime_type": "http",
   "description": "What the tool does.",
   "endpoint": "https://tool.example.com/invoke",
@@ -153,7 +152,7 @@ Also usable with `tool update <id> -f file` if the payload does not include low-
 Rules:
 
 - `name` and `description` are required.
-- `provider` defaults to `internal`; `version` defaults to `v1`.
+- `provider` defaults to `internal`; the gateway assigns response `version` starting at `v1`.
 - The gateway may normalize `provider` to an internal provider UUID; use the returned provider value for later `--provider` filters.
 - `runtime_type` defaults to `http` when `endpoint` is present, otherwise to `builtin`; `method` defaults to `POST` and is forwarded to Agent Worker.
 - Timeout defaults to `10000` ms. Concise input still accepts `config.timeout_ms` or `config.timeout` for compatibility, converts it to the outer `timeout_ms`, and removes it from stored metadata.
@@ -173,7 +172,6 @@ Builtin example:
 {
   "provider": "seaart",
   "name": "generate_image",
-  "version": "v1",
   "runtime_type": "builtin",
   "description": "SeaArt image generation.",
   "parameters": {
@@ -299,7 +297,6 @@ seaagent agent register -f <payload.json>
 ```json
 {
   "name": "agent_name",
-  "version": "v1",
   "category": "fabric",
   "model": {
     "default": "gpt-5.1-chat",
@@ -321,8 +318,8 @@ Rules:
 
 - `name`, `category`, and `owner_id` are required after defaults on current gateway deployments.
 - `category` is required because it maps gateway runs to Scheduler resource pools. Allowed values are `fabric` and `seaactor`; use `fabric` for standard runnable agents and `seaactor` only when that scheduler class is explicitly required.
-- `version` defaults to `v1`; `owner_id` defaults to `internal`; gateway returns a UUID `id`.
-- Do not send removed `agent_key` fields for new concise agent registrations. Reject or normalize names like `react_game_generator_agent_013919`; use canonical `name: "react_game_generator_agent"` plus an intentional `owner_id` and `version`.
+- `owner_id` defaults to `internal`; gateway returns a UUID `id` and response `version` starting at `v1`.
+- Do not send removed `agent_key` fields for new concise agent registrations. Reject or normalize names like `react_game_generator_agent_013919`; use canonical `name: "react_game_generator_agent"` plus an intentional `owner_id`.
 - `model` and `config` default to `{}`. Agent `metadata` is ignored and stored as `{}`; use `config` for runtime settings.
 - `skills` must contain non-empty Skill UUIDs and every referenced skill must resolve to active Skill current state visible to the agent owner. Private Skill refs owned by another production line are rejected.
 - Agent register creates an active agent by default. `enabled` is kept only for payload compatibility.

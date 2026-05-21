@@ -1,6 +1,5 @@
 {
   "name": "web_assistant",
-  "version": "v1",
   "category": "fabric",
   "model": {
     "default": "gpt-4o",

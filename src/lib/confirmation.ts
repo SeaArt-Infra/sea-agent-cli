@@ -90,12 +90,8 @@ function inferResourceID(payload: unknown): string | undefined {
   }
   const ownerOrProvider = stringField(payload, "owner_id") ?? stringField(payload, "provider");
   const name = stringField(payload, "name");
-  const version = stringField(payload, "version");
-  if (ownerOrProvider && name && version) {
-    return `${ownerOrProvider}:${name}:${version}`;
-  }
-  if (name && version) {
-    return `${name}:${version}`;
+  if (ownerOrProvider && name) {
+    return `${ownerOrProvider}:${name}`;
   }
   return name;
 }
@@ -104,7 +100,7 @@ function summarizePayload(payload: unknown): string | undefined {
   if (!isRecord(payload)) {
     return undefined;
   }
-  const fields = ["owner_id", "provider", "name", "version", "status", "category"];
+  const fields = ["owner_id", "provider", "name", "status", "category"];
   const parts = fields.flatMap((field) => {
     const value = stringField(payload, field);
     return value ? [`${field}=${value}`] : [];
