@@ -158,7 +158,7 @@ Rules:
 - Timeout defaults to `10000` ms. Concise input still accepts `config.timeout_ms` or `config.timeout` for compatibility, converts it to the outer `timeout_ms`, and removes it from stored metadata.
 - `response_mode` defaults to `json`; allowed values are `json` and `sse`.
 - `poll_interval` and `poll_timeout` are seconds. Use positive values only; omit polling fields for synchronous tools and non-HTTP tools.
-- HTTP runtime fields are stored in `tools.metadata` and forwarded into runtime `agent.tools[]`; `endpoint` is stored as `metadata.endpoint` but returned/sent to Worker as top-level `endpoint`.
+- HTTP runtime fields are stored in `tools.metadata` and forwarded into runtime `agent.tools[]`; `endpoint` may be provided in register/update payloads, is stored as `metadata.endpoint`, and is sent to Worker as top-level `endpoint`.
 - `name` is the Worker tool name; keep provider-like prefixes when they are part of the worker name, but do not include a trailing version suffix such as `:v1`. `parameters` becomes `openai_schema.function.parameters`; `openai_schema.function.name` is omitted.
 - `runtime_type: "http"` tools must provide `endpoint`.
 - `runtime_type: "builtin"` does not need runtime metadata. Keep `config` empty unless compatibility with an older gateway requires it; do not put duplicate `type`, `name`, `function`, or polling fields there.
