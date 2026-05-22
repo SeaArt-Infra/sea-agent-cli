@@ -152,6 +152,7 @@ Also usable with `tool update <id> -f file` if the payload does not include low-
 Rules:
 
 - `name` and `description` are required.
+- Tool register and update require a production-line API key. OpenResty checks Redis `flag == 1` and forwards `X-Flag`; agent-gateway rejects Tool writes unless `X-Flag: 1`.
 - `provider` defaults to `internal`; the gateway assigns response `version` starting at `v1`.
 - The gateway may normalize `provider` to an internal provider UUID; use the returned provider value for later `--provider` filters.
 - `runtime_type` defaults to `http` when `endpoint` is present, otherwise to `builtin`; `method` defaults to `POST` and is forwarded to Agent Worker.
