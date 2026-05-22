@@ -97,7 +97,7 @@ Resource and runtime enums:
 - Skill `metadata` is reserved by the gateway and stored as `{}`; do not put migration notes, display data, or runtime config in `skills.metadata`.
 - Tool `runtime_type`: `http`, `builtin`, `mcp`. Concise payloads still accept old `transport` compatibility values and convert them into `runtime_type`.
 - Worker tool `name` comes only from the outer Tool `name`. The gateway keeps provider-like prefixes such as `seaart:create_polishing`, but removes trailing version suffixes such as `:v1`. Do not put duplicate names in `metadata.name` or `openai_schema.function.name`.
-- HTTP tools keep `method` in runtime metadata and forward it to Agent Worker; default is `POST`.
+- HTTP tools keep `endpoint`, `method`, response, and polling config in runtime metadata and forward them to Agent Worker as top-level ToolSpec fields; default method is `POST`.
 - Tool `response_mode`: `json`, `sse`.
 
 JSON object fields must contain valid objects when present. Use `{}` for empty `metadata`, `config`, or `model` values, and `[]` for empty arrays.
@@ -111,7 +111,7 @@ Schema-slimming guidance:
 - Do not add removed `tool_key`, `skill_key`, or `agent_key` fields to register payloads.
 - Prefer `provider` over owner-like fields for Tool and Skill identity. `owner_id` is being removed from Tool and Skill flows.
 - Avoid Tool metadata that only serves catalog display in gateway payloads: `slug`, `category`, `description`, `tags`, and `checksum`.
-- Do not send Tool metadata fields that duplicate outer/current-state data or are not forwarded to Worker: `name`, `function`, `timeout_ms`, `response_content_type`, `request_headers`, `schema_contract`.
+- Do not send Tool metadata fields that duplicate outer/current-state data or are not forwarded to Worker: `type`, `name`, `function`, `timeout_ms`, `response_content_type`, `request_headers`, `schema_contract`. Use outer `runtime_type`, not `metadata.type`.
 - Do not send Skill or Agent metadata in gateway payloads; the gateway stores both as `{}`. Keep Skill runtime config in `manifest.config`, Agent runtime config in `config`/`agent_config`, and display data in server/catalog layers.
 - If a deployed gateway still requires an old field, keep it only in a compatibility payload and do not rely on it in Agent Worker runtime behavior.
 
@@ -157,11 +157,11 @@ Rules:
 - `runtime_type` defaults to `http` when `endpoint` is present, otherwise to `builtin`; `method` defaults to `POST` and is forwarded to Agent Worker.
 - Timeout defaults to `10000` ms. Concise input still accepts `config.timeout_ms` or `config.timeout` for compatibility, converts it to the outer `timeout_ms`, and removes it from stored metadata.
 - `response_mode` defaults to `json`; allowed values are `json` and `sse`.
-- `poll_interval` and `poll_timeout` are seconds. Use positive values only; omit polling fields for synchronous tools.
-- Polling fields are stored in `tools.metadata` and forwarded into runtime `agent.tools[]`.
+- `poll_interval` and `poll_timeout` are seconds. Use positive values only; omit polling fields for synchronous tools and non-HTTP tools.
+- HTTP runtime fields are stored in `tools.metadata` and forwarded into runtime `agent.tools[]`; `endpoint` is stored as `metadata.endpoint` but returned/sent to Worker as top-level `endpoint`.
 - `name` is the Worker tool name; keep provider-like prefixes when they are part of the worker name, but do not include a trailing version suffix such as `:v1`. `parameters` becomes `openai_schema.function.parameters`; `openai_schema.function.name` is omitted.
 - `runtime_type: "http"` tools must provide `endpoint`.
-- `runtime_type: "builtin"` creates embedded current-state tool metadata. Put only Worker ToolSpec fields such as `type`, `response_mode`, and polling settings in `config`; do not put duplicate `name` or `function` fields there.
+- `runtime_type: "builtin"` does not need runtime metadata. Keep `config` empty unless compatibility with an older gateway requires it; do not put duplicate `type`, `name`, `function`, or polling fields there.
 - `runtime_type: "mcp"` creates MCP metadata and does not require `endpoint`. Put MCP metadata in `config`.
 - Do not send removed `tool_key` fields on `/v1/tools/register`.
 - Do not send `slug`, `category`, `tags`, `checksum`, or `owner_id` in new Tool payloads.
@@ -181,9 +181,7 @@ Builtin example:
     },
     "required": ["prompt"]
   },
-  "config": {
-    "type": "builtin"
-  },
+  "config": {},
   "enabled": true
 }
 ```
@@ -204,13 +202,14 @@ Use with `tool register` to create if the payload includes low-level trigger fie
     }
   },
   "runtime_type": "http",
-  "endpoint": "https://tool.example.com/invoke",
   "method": "POST",
   "response_mode": "json",
   "timeout_ms": 10000,
   "public": false,
   "status": "active",
-  "metadata": {}
+  "metadata": {
+    "endpoint": "https://tool.example.com/invoke"
+  }
 }
 ```
 
