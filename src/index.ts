@@ -10,6 +10,7 @@ import { selfCommand } from "./commands/self.js";
 import { skillCommand } from "./commands/skill.js";
 import { systemCommand } from "./commands/system.js";
 import { toolCommand } from "./commands/tool.js";
+import { maybeNotifyCliUpdate } from "./lib/cli-update.js";
 import { addHelpText } from "./lib/help.js";
 import { maybeNotifySkillUpdate } from "./lib/self-update.js";
 
@@ -44,7 +45,9 @@ Configuration:
     seaagent config set user-id production-line-123
 
 Common workflows:
-  Check local CLI support files:
+  Check CLI package and local support files:
+    seaagent self check-update
+    seaagent self update
     seaagent self check
     seaagent self update-skill
 
@@ -75,6 +78,14 @@ More help:
 `);
 
 const argv = process.argv.map((arg) => (arg === "-help" ? "--help" : arg));
+
+try {
+  await maybeNotifyCliUpdate(argv.slice(2));
+} catch (error) {
+  if (process.env.SEAAGENT_DEBUG === "1") {
+    console.error(`[cli-update-check:error] ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
 
 try {
   await maybeNotifySkillUpdate(argv.slice(2));

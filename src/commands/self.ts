@@ -1,17 +1,47 @@
 import { Command } from "commander";
+import { getCliUpdateStatus, updateCliPackage } from "../lib/cli-update.js";
 import { addHelpText } from "../lib/help.js";
 import { printJSON } from "../lib/output.js";
 import { getSkillUpdateStatus, updateLocalSkill } from "../lib/self-update.js";
 
 export function selfCommand(): Command {
-  const cmd = addHelpText(new Command("self").description("Check and update local CLI support files"), `
-Self commands compare this installed CLI package with local support files.
-Automatic checks run at most every 2 hours and only print update notices to stderr.
+  const cmd = addHelpText(new Command("self").description("Check and update local CLI package and support files"), `
+Self commands check this installed CLI package and bundled local support files.
+Automatic CLI update checks run at most daily and only print update notices to stderr.
+Automatic skill checks run at most every 2 hours and only print update notices to stderr.
 
 Examples:
+  seaagent self check-update
+  seaagent self update
   seaagent self check
   seaagent self update-skill
 `);
+
+  cmd
+    .command("check-update")
+    .description("Check whether a newer seaagent CLI is available on GitHub")
+    .action(async () => {
+      printJSON(await getCliUpdateStatus());
+    });
+
+  cmd
+    .command("update")
+    .description("Update this CLI with npm install -g from GitHub")
+    .action(async () => {
+      const status = await getCliUpdateStatus();
+      if (status.status === "up-to-date") {
+        printJSON({
+          updated: false,
+          reason: "already up to date",
+          localCommit: status.localCommit,
+          remoteCommit: status.remoteCommit,
+          installSpec: status.installSpec,
+        });
+        return;
+      }
+      process.stderr.write(`Running: npm install -g ${status.installSpec}\n`);
+      printJSON(await updateCliPackage());
+    });
 
   cmd
     .command("check")
