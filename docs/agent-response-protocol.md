@@ -43,6 +43,24 @@
 - `category`：调度类别，当前有效值为 `fabric` 或 `seaactor`。
 - `metadata`：透传上下文，例如 `session_id`、`user_id`、`api_key` 等。
 
+`messages[].content` 兼容 OpenAI 风格的字符串或多模态 content parts 数组：
+
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {"type": "text", "text": "描述这张图片"},
+        {"type": "image_url", "image_url": {"url": "https://image.cdn2.seaart.me/static/infra/agent-chat/user-11/image/20260529/e4fc53aac523b4f56e582a65a717381a.png"}}
+      ]
+    }
+  ]
+}
+```
+
+CLI 可用 `seaagent chat run --messages-file examples/chat-multimodal.json <agent-id>` 发送完整消息数组。
+
 ## 非流式返回
 
 当 `stream: false` 时，接口返回 `ChatCompletionResponse`：

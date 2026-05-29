@@ -1,0 +1,17 @@
+[
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "描述这张图片"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url": "https://image.cdn2.seaart.me/static/infra/agent-chat/user-11/image/20260529/e4fc53aac523b4f56e582a65a717381a.png"
+        }
+      }
+    ]
+  }
+]

@@ -182,6 +182,7 @@ seaagent chat run <agent-id> "<message>"
 seaagent chat run --ws <agent-id> "<message>"
 seaagent chat run --stream-retries 5 <agent-id> "<message with limited reconnects>"
 seaagent chat run --agent-config-file <runtime-config.json|yaml> "<message>"
+seaagent chat run --messages-file <messages.json|yaml> <agent-id>
 seaagent chat run --no-stream <agent-id> "<message>"
 seaagent chat get <chat-id>
 seaagent chat events <chat-id> [--after-seq <n>] [--limit <n>]
@@ -189,6 +190,8 @@ seaagent chat stream <chat-id> [--after-seq <n>]
 seaagent chat stream --ws <chat-id> [--after-seq <n>]
 seaagent chat cancel <chat-id>
 ```
+
+`--messages-file` accepts a JSON/YAML messages array, or an object with a `messages` field. Use it for OpenAI-style multimodal content parts such as text plus `image_url` / `video_url`.
 
 `chat run --no-stream` enriches successful runs with `response.message.content` when stored events are available. Failed runs are enriched with `response.error`, `error_message`, and `error_code` when failure events contain that data.
 

@@ -14,6 +14,7 @@ Examples:
   seaagent chat run --no-stream <agent-id> "return JSON"
   seaagent chat run --ws <agent-id> "stream over WebSocket"
   seaagent chat run --agent-config-file examples/runtime-agent-config.json "Fetch https://example.com"
+  seaagent chat run --messages-file examples/chat-multimodal.json <agent-id>
   seaagent chat events <chat-id> --after-seq 12
   seaagent chat stream <chat-id> --after-seq 12
 `);
@@ -24,6 +25,7 @@ Examples:
     .argument("[agent-id]", "registered agent UUID; optional when --agent-config-file is used")
     .argument("[message...]", "user message text")
     .option("-f, --agent-config-file <path>", "JSON/YAML runtime agent_config file")
+    .option("--messages-file <path>", "JSON/YAML messages array or full chat payload file")
     .option("--no-stream", "disable streaming")
     .option("--ws", "use WebSocket streaming")
     .option("--stream-retries <number>", "stream reconnect attempts after interruption; -1 means unlimited", "-1")
@@ -36,9 +38,11 @@ Examples:
   seaagent chat run --ws <agent-id> "Stream with WebSocket"
   seaagent chat run --stream-retries 5 <agent-id> "Reconnect at most five times"
   seaagent chat run --agent-config-file examples/runtime-agent-config.json "Fetch https://example.com"
+  seaagent chat run --messages-file examples/chat-multimodal.json <agent-id>
 
 Notes:
   - Either [agent-id] or --agent-config-file is required.
+  - --messages-file accepts a messages array or an object with a messages field.
   - With streaming enabled, stdout contains rendered model/tool progress.
   - With --no-stream, stdout is gateway JSON enriched with response.message.content when stored events are available.`)
     .action(async (agentID: string | undefined, messageParts: string[] | undefined, options: ChatRunOptions) => {
@@ -49,10 +53,11 @@ Notes:
       if (!options.stream && options.ws) {
         throw new Error("--ws cannot be used with --no-stream");
       }
+      const messages = await chatMessagesFromCommand(messageParts, options.messagesFile);
       const payload = {
         ...(agentID ? { agent_id: agentID } : {}),
         ...(options.agentConfigFile ? { agent_config: await readPayload(options.agentConfigFile) } : {}),
-        messages: [{ role: "user", content: (messageParts ?? []).join(" ") }],
+        messages,
         stream: options.stream,
       };
       if (options.stream) {
@@ -117,6 +122,7 @@ Examples:
 
 type ChatRunOptions = {
   agentConfigFile?: string;
+  messagesFile?: string;
   stream: boolean;
   ws?: boolean;
   streamRetries: string;
@@ -150,6 +156,25 @@ type ChatStreamRenderer = {
 };
 
 const CHAT_EVENTS_PAGE_LIMIT = 1000;
+
+async function chatMessagesFromCommand(messageParts: string[] | undefined, messagesFile?: string): Promise<unknown[]> {
+  if (!messagesFile) {
+    return [{ role: "user", content: (messageParts ?? []).join(" ") }];
+  }
+  const payload = await readPayload(messagesFile);
+  const messages = Array.isArray(payload) ? payload : objectMessages(payload);
+  if (!Array.isArray(messages) || messages.length === 0) {
+    throw new Error("--messages-file must contain a non-empty messages array");
+  }
+  return messages;
+}
+
+function objectMessages(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+  return (value as { messages?: unknown }).messages;
+}
 
 async function completeNonStreamingChatResponse(client: AgentGatewayClient, response: unknown): Promise<unknown> {
   const runID = findRunID(response);
