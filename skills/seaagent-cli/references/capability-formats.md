@@ -94,7 +94,7 @@ Resource and runtime enums:
 - Skill `metadata` is reserved by the gateway and stored as `{}`; do not put migration notes, display data, or runtime config in `skills.metadata`.
 - Tool `runtime_type`: `http`, `builtin`, `mcp`. Concise payloads still accept old `transport` compatibility values and convert them into `runtime_type`.
 - Worker tool `name` comes only from the outer Tool `name`. The gateway keeps provider-like prefixes such as `seaart:create_polishing`, but removes trailing version suffixes such as `:v1`. Do not put duplicate names in `metadata.name` or `openai_schema.function.name`.
-- HTTP tools keep `endpoint`, `method`, response, and polling config in runtime metadata and forward them to Agent Worker as top-level ToolSpec fields; default method is `POST`.
+- HTTP tools keep `endpoint`, `method`, response, and polling config in runtime metadata and forward them to Agent Worker as top-level ToolSpec fields; default method is `POST`. `service_name` and `inject_user_credentials` are not metadata fields; they are top-level Tool fields beside `name`.
 - Tool `response_mode`: `json`, `sse`.
 
 JSON object fields must contain valid objects when present. Use `{}` for empty `metadata`, `config`, or `model` values, and `[]` for empty arrays.
@@ -154,8 +154,8 @@ Rules:
 - `provider` defaults to `internal`; the gateway assigns response `version` starting at `v1`.
 - The gateway may normalize `provider` to an internal provider UUID; use the returned provider value for later `--provider` filters.
 - `runtime_type` defaults to `http` when `endpoint` is present, otherwise to `builtin`; `method` defaults to `POST` and is forwarded to Agent Worker.
-- `service_name` identifies the backing service for the Tool. For remote HTTP tools, use the endpoint host's service prefix, for example `http://agentctl-service.us-west1.infra.seaart.dev/tools/bootstrap_from_tool` uses `agentctl-service`; tools on the same service should share one `service_name`. If omitted, gateway derives it from the endpoint host. Builtin and no-endpoint tools default to `deepagent`.
-- `inject_user_credentials` defaults to `false` and is gateway-managed; do not include it in user-facing register/update payloads.
+- `service_name` is a top-level Tool field at the same JSON level as `name`. For remote HTTP tools, use the endpoint host's service prefix, for example `http://agentctl-service.us-west1.infra.seaart.dev/tools/bootstrap_from_tool` uses `agentctl-service`; tools on the same service should share one `service_name`. If omitted, gateway derives it from the endpoint host. Builtin and no-endpoint tools default to `deepagent`. Do not place `service_name` in `metadata` or `config`.
+- `inject_user_credentials` is also a top-level Tool/Worker field at the same JSON level as `name`; it defaults to `false` and is gateway-managed. Do not include it in user-facing register/update payloads, `metadata`, or `config`.
 - Timeout defaults to `10000` ms. Concise input still accepts `config.timeout_ms` or `config.timeout` for compatibility, converts it to the outer `timeout_ms`, and removes it from stored metadata.
 - `response_mode` defaults to `json`; allowed values are `json` and `sse`.
 - `poll_interval` and `poll_timeout` are seconds. Use positive values only; omit polling fields for synchronous tools and non-HTTP tools.

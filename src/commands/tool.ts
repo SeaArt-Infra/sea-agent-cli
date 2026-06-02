@@ -39,9 +39,10 @@ the target gateway deployment still requires it.
 Payload notes:
   - provider may be normalized by the gateway to an internal provider UUID.
     Use the returned provider value for later --provider filters.
-  - service_name is optional but recommended for HTTP tools that share one
-    backing service. When omitted, gateway derives it from the endpoint host.
-  - inject_user_credentials is gateway-managed and should not be provided.`)
+  - service_name is a top-level Tool field at the same level as name. It is
+    optional for HTTP tools; when omitted, gateway derives it from the endpoint host.
+  - inject_user_credentials is also a top-level Tool/Worker field, but it is
+    gateway-managed and should not be provided in user-facing payloads.`)
     .action(async (options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
       const payload = await readPayload(options.file);
