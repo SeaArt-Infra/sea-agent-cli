@@ -267,14 +267,16 @@ Rules:
 - The gateway builds current `skills.manifest` only from `instruction`, `config`, `required_tools`, and `optional_tools`.
 - Do not send manifest/display fields that duplicate outer Skill data or server-owned display data: `id`, `name`, `version`, `display_name`, `description`, `category`, `provider`, `tags`, and `triggers`.
 - `required_tools` and `optional_tools` must be arrays when present.
-- A string tool ref becomes `{ "type": "http", "ref": "<value>" }`.
-- Object refs use `{"type":"builtin|http|http_batch|mcp","ref":"...","server":"..."}`. `server` is required for `type: "mcp"`.
+- Use string refs for default registered HTTP Tool UUIDs; the gateway normalizes `"tool-uuid"` to `{ "type": "http", "ref": "tool-uuid" }`.
+- Use object refs when you need a non-default type, or when you want to make the HTTP type explicit: `{"type":"builtin|http|http_batch|mcp","ref":"...","server":"..."}`.
+- Object refs must include `type` and `ref`; `server` is required for `type: "mcp"`.
 - Do not send removed `skill_key` fields on `/v1/skills/register`.
 - Do not send `slug`, `entry_file`, `dependencies`, `bundle_uri`, `checksum`, or `owner_id` in new Skill payloads.
 
 Tool refs should match the gateway resolver:
 
 - Use registered Tool UUIDs for `http`, `http_batch`, and registered `builtin` refs.
+- Do not use Tool `name` or removed `tool_key` values as refs.
 - Builtin tools may intentionally use stable aliases such as `seaart:generate_image`.
 - For SeaArt builtin media tools registered in the gateway, use the active Tool UUID in skill manifests. Runtime-local `builtin` refs can still use their builtin identifier when no registry Tool is required.
 
