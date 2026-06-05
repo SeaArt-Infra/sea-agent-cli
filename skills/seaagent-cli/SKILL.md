@@ -254,9 +254,12 @@ On the current SeaArt gateway, agent `category` is constrained to `fabric` or `s
 ```json
 {
   "default": "gpt-5.1-chat",
-  "allowed": ["gpt-5.1-chat", "gpt-4.1-mini", "gpt-4o"]
+  "allowed": ["gpt-5.1-chat", "gpt-4.1-mini", "gpt-4o"],
+  "reasoning_effort": "medium"
 }
 ```
+
+`reasoning_effort` is optional. Supported values are `minimal`, `low`, `medium`, and `high`; the gateway forwards it to the Agent Worker as the top-level `reasoning_effort`.
 
 If a newly registered agent times out even on the no-tool smoke test, update it with the low-level `agent update` shape and set `category: "fabric"` plus the model config above, then retest before debugging tools.
 
@@ -367,7 +370,7 @@ Tool and Skill use one exposed create endpoint, `/register`, but the gateway han
 - Skill and Agent metadata are reserved by gateway and stored as `{}`; put Skill runtime config in `manifest`, and Agent runtime config in `config`/`agent_config`.
 - Agent register shape: no `model_config` or `agent_config`; the gateway parses `AgentRegisterRequest`.
 - Agent low-level shape: includes `model_config` or `agent_config`; the gateway parses `AgentCreateRequest` and returns a UUID `id`.
-- Agent model names are normalized on create/update: in `model.default`, `model.allowed`, `model_config.default`, and `model_config.allowed`, provider or routing prefixes such as `vertex_ai/`, `openai/`, or `gpt/` are removed and only the model name after the slash is stored.
+- Agent model names are normalized on create/update: in `model.default`, `model.allowed`, `model_config.default`, and `model_config.allowed`, provider or routing prefixes such as `vertex_ai/`, `openai/`, or `gpt/` are removed and only the model name after the slash is stored. `model.reasoning_effort` / `model_config.reasoning_effort` is optional and must be one of `minimal`, `low`, `medium`, or `high`.
 
 Update endpoints have similar Tool/Skill switching:
 

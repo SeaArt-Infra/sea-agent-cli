@@ -316,7 +316,8 @@ seaagent agent register -f <payload.json>
   "category": "fabric",
   "model": {
     "default": "gpt-5.1-chat",
-    "allowed": ["gpt-5.1-chat", "gpt-4.1-mini", "gpt-4o"]
+    "allowed": ["gpt-5.1-chat", "gpt-4.1-mini", "gpt-4o"],
+    "reasoning_effort": "medium"
   },
   "system_prompt": "Base system prompt.",
   "skills": ["11111111-1111-4111-8111-111111111111"],
@@ -372,7 +373,8 @@ Use with `agent register` to create if the payload includes low-level trigger fi
   "metadata": {},
   "model_config": {
     "default": "gpt-5.1-chat",
-    "allowed": ["gpt-5.1-chat", "gpt-4.1-mini", "gpt-4o"]
+    "allowed": ["gpt-5.1-chat", "gpt-4.1-mini", "gpt-4o"],
+    "reasoning_effort": "medium"
   },
   "system_prompt": "Base system prompt.",
   "agent_config": {
@@ -387,6 +389,8 @@ Use with `agent register` to create if the payload includes low-level trigger fi
 Agent `metadata` is stored as `{}`. Every skill ref must resolve to active Skill current state. Low-level `status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`; an Agent must be `active` to run through chat. `category` must remain `fabric` or `seaactor`.
 
 Gateway normalizes `model_config.default` and `model_config.allowed` by removing provider or routing prefixes before storage. For example, `vertex_ai/gemini-3-flash-preview`, `openai/gpt-4o`, and `gpt/gpt-4.1-mini` are stored as `gemini-3-flash-preview`, `gpt-4o`, and `gpt-4.1-mini`.
+
+`model.reasoning_effort` / `model_config.reasoning_effort` is optional. Supported values are `minimal`, `low`, `medium`, and `high`; the gateway forwards it to the Agent Worker as the top-level `reasoning_effort`.
 
 Use the low-level update shape to fix runnable-agent issues after registration. If a no-tool chat smoke test returns a proxy timeout, first verify/update `category: "fabric"` and a known-good `model_config` before investigating tool behavior.
 
