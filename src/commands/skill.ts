@@ -132,5 +132,27 @@ Example:
       printJSON(await client.put(`/v1/skills/${encodeURIComponent(skillID)}`, payload));
     });
 
+  cmd
+    .command("delete")
+    .description("Delete a skill via /v1/skills/{skill-id}")
+    .argument("<skill-id>", "skill UUID")
+    .addHelpText("after", `
+
+Example:
+  seaagent skill delete <skill-id>
+
+Delete uses the configured user-id as X-User-ID. The gateway only allows the
+skill provider to delete the skill.`)
+    .action(async (skillID: string) => {
+      const client = await AgentGatewayClient.fromConfig();
+      await confirmRegistryMutation({
+        action: "delete",
+        endpoint: client.getEndpoint(),
+        resource: "skill",
+        resourceID: skillID,
+      });
+      printJSON(await client.delete(`/v1/skills/${encodeURIComponent(skillID)}`));
+    });
+
   return cmd;
 }

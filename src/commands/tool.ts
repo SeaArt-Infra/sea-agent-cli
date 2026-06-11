@@ -140,5 +140,27 @@ metadata that Agent Worker receives.`)
       printJSON(await client.get(`/v1/tools/${encodeURIComponent(toolID)}/resolve`));
     });
 
+  cmd
+    .command("delete")
+    .description("Delete a tool via /v1/tools/{tool-id}")
+    .argument("<tool-id>", "tool UUID")
+    .addHelpText("after", `
+
+Example:
+  seaagent tool delete <tool-id>
+
+Delete uses the configured user-id as X-User-ID. The gateway only allows the
+tool provider to delete the tool.`)
+    .action(async (toolID: string) => {
+      const client = await AgentGatewayClient.fromConfig();
+      await confirmRegistryMutation({
+        action: "delete",
+        endpoint: client.getEndpoint(),
+        resource: "tool",
+        resourceID: toolID,
+      });
+      printJSON(await client.delete(`/v1/tools/${encodeURIComponent(toolID)}`));
+    });
+
   return cmd;
 }

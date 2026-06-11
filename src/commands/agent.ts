@@ -29,6 +29,7 @@ Examples:
   seaagent agent list --status active
   seaagent agent register -f examples/agent-web.json
   seaagent agent get <agent-id>
+  seaagent agent delete <agent-id>
   seaagent agent capabilities <agent-id>
   seaagent chat run <agent-id> "hello"
 `);
@@ -93,6 +94,28 @@ Example:
         resourceID: agentID,
       });
       printJSON(await client.put(`/v1/agents/${encodeURIComponent(agentID)}`, payload));
+    });
+
+  cmd
+    .command("delete")
+    .description("Delete an agent via /v1/agents/{agent-id}")
+    .argument("<agent-id>", "agent UUID")
+    .addHelpText("after", `
+
+Example:
+  seaagent agent delete <agent-id>
+
+Delete uses the configured user-id as X-User-ID. The gateway only allows the
+agent owner to delete the agent.`)
+    .action(async (agentID: string) => {
+      const client = await AgentGatewayClient.fromConfig();
+      await confirmRegistryMutation({
+        action: "delete",
+        endpoint: client.getEndpoint(),
+        resource: "agent",
+        resourceID: agentID,
+      });
+      printJSON(await client.delete(`/v1/agents/${encodeURIComponent(agentID)}`));
     });
 
   cmd
