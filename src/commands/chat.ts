@@ -43,7 +43,7 @@ Examples:
 Notes:
   - Either [agent-id] or --agent-config-file is required.
   - --messages-file accepts a messages array or an object with a messages field.
-  - With streaming enabled, stdout contains rendered model/tool progress.
+  - With streaming enabled, stdout contains assistant text; stderr contains run_id, progress, tool status, and terminal usage when available.
   - With --no-stream, stdout is gateway JSON enriched with response.message.content when stored events are available.`)
     .action(async (agentID: string | undefined, messageParts: string[] | undefined, options: ChatRunOptions) => {
       const client = await AgentGatewayClient.fromConfig();
@@ -146,6 +146,8 @@ type ChatStreamSnapshot = {
   lastSeq: number;
   terminal: boolean;
 };
+
+type ChatUsage = Record<string, unknown>;
 
 type ChatStreamRenderer = {
   writeSSEChunk: (chunk: string) => void;
@@ -457,12 +459,18 @@ function createChatStreamRenderer(initialRunID?: string, initialSeq = 0): ChatSt
   let buffer = "";
   let wroteText = false;
   let runID = initialRunID;
+  let reportedRunID = false;
   let lastSeq = initialSeq;
   let terminal = false;
   let failure: Error | undefined;
+  let usage: ChatUsage | undefined;
 
   const handleEvent = (event: ChatStreamEvent): void => {
     runID = stringField(event.data, "run_id") || runID;
+    if (runID && !reportedRunID) {
+      process.stderr.write(`\n[run_id ${runID}]\n`);
+      reportedRunID = true;
+    }
     if (event.id !== undefined) {
       lastSeq = Math.max(lastSeq, event.id);
     }
@@ -473,6 +481,7 @@ function createChatStreamRenderer(initialRunID?: string, initialSeq = 0): ChatSt
     }
     if (isTerminalStreamEvent(event.event)) {
       terminal = true;
+      usage = usageFromStreamEvent(event) || usage;
     }
     if (event.event === "chat.failed" || event.event === "response.failed" || event.event === "chat.cancelled" || event.event === "response.cancelled") {
       failure = errorFromStreamEvent(event);
@@ -482,6 +491,11 @@ function createChatStreamRenderer(initialRunID?: string, initialSeq = 0): ChatSt
       wroteText = true;
     }
   };
+
+  if (runID) {
+    process.stderr.write(`\n[run_id ${runID}]\n`);
+    reportedRunID = true;
+  }
 
   return {
     writeSSEChunk(chunk: string): void {
@@ -514,6 +528,9 @@ function createChatStreamRenderer(initialRunID?: string, initialSeq = 0): ChatSt
       }
       if (wroteText) {
         process.stdout.write("\n");
+      }
+      if (usage) {
+        process.stderr.write(`${formatUsageForDisplay(usage)}\n`);
       }
     },
   };
@@ -714,6 +731,77 @@ function parseJSONLike(text: string): unknown {
   } catch {
     return undefined;
   }
+}
+
+function usageFromStreamEvent(event: ChatStreamEvent): ChatUsage | undefined {
+  for (const path of [
+    "usage",
+    "response.usage",
+    "response.response.usage",
+    "data.usage",
+    "data.response.usage",
+    "data.response.response.usage",
+  ]) {
+    const usage = normalizeUsage(nestedValue(event.data, path));
+    if (usage) {
+      return usage;
+    }
+  }
+  return undefined;
+}
+
+function normalizeUsage(value: unknown): ChatUsage | undefined {
+  if (!value) {
+    return undefined;
+  }
+  if (typeof value === "string") {
+    const parsed = parseJSONLike(value);
+    return normalizeUsage(parsed);
+  }
+  if (typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+  if (Object.keys(value).length === 0) {
+    return undefined;
+  }
+  return value as ChatUsage;
+}
+
+function nestedValue(data: unknown, path: string): unknown {
+  let current = data;
+  for (const field of path.split(".")) {
+    if (!current || typeof current !== "object") {
+      return undefined;
+    }
+    current = (current as Record<string, unknown>)[field];
+  }
+  return current;
+}
+
+function formatUsageForDisplay(usage: ChatUsage): string {
+  const preferredFields = [
+    "input_tokens",
+    "output_tokens",
+    "total_tokens",
+    "prompt_tokens",
+    "completion_tokens",
+    "cost",
+    "total_cost",
+  ];
+  const parts = preferredFields
+    .filter((field) => usage[field] !== undefined)
+    .map((field) => `${field}=${formatUsageValue(usage[field])}`);
+  if (parts.length > 0) {
+    return `[usage ${parts.join(" ")}]`;
+  }
+  return `[usage ${JSON.stringify(usage)}]`;
+}
+
+function formatUsageValue(value: unknown): string {
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return JSON.stringify(value);
 }
 
 function isTerminalStreamEvent(event: string): boolean {

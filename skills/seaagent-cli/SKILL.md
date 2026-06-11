@@ -207,6 +207,8 @@ seaagent chat cancel <chat-id>
 
 `--messages-file` accepts a JSON/YAML messages array, or an object with a `messages` field. Use it for OpenAI-style multimodal content parts such as text plus `image_url` / `video_url`.
 
+Streaming chat renders assistant text to stdout. It prints the chat `run_id` to stderr when known, and prints terminal `usage` to stderr when the final event includes usage metadata.
+
 `chat run --no-stream` enriches successful runs with `response.message.content` when stored events are available. Failed runs are enriched with `response.error`, `error_message`, and `error_code` when failure events contain that data.
 
 Sandbox runs:
