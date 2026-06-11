@@ -1,7 +1,7 @@
 ---
 name: seaagent-cli
 description: "Use this skill when working with the local seaagent CLI for SeaArt agent-gateway: configuring endpoints and API keys, registering/updating/deleting tools, skills, and agents, listing catalog entries, resolving runtime configs, and running or inspecting chats."
-version: "2026.05.25"
+version: "2026.06.11"
 ---
 
 # Seaagent CLI
@@ -58,6 +58,17 @@ Commands with `-f/--file` read JSON or YAML. JSON is parsed for every path excep
 
 For payload fields, defaults, and examples, read [Capability Formats](references/capability-formats.md).
 That reference is the source of truth for allowed enum values, pagination bounds, required fields, and fields that are deprecated by the gateway schema-slimming work.
+
+For guided create/update work, read the relevant manager workflow before
+assembling payloads:
+
+- [Tool Manager Workflow](references/tool-manager-workflow.md): create or update HTTP Tools from SDK manifests, OpenAPI metadata, service endpoints, or existing Tool ids.
+- [Skill Manager Workflow](references/skill-manager-workflow.md): create or update Skills by selecting active Tools, writing instructions, and building `required_tools`.
+- [Agent Manager Workflow](references/agent-manager-workflow.md): create or update Agents by selecting active Skills, writing `system_prompt`, and preserving runtime config.
+
+If a request spans multiple resource types, work bottom-up: Tool first, then
+Skill, then Agent. Do not register or update any resource until the final
+payload for that resource has been shown to the user and explicitly approved.
 
 Use the repo examples as starting points:
 
@@ -214,7 +225,7 @@ seaagent sandbox delete <sandbox-run-id>
 
 `seaagent game ...` is a legacy alias for the same run lifecycle on `/v1/game/runs`; prefer `sandbox` for new work.
 
-## Agent Registration Workflow
+## Registry Mutation Workflow
 
 Registry mutations are gated operations. Before running any `agent`, `skill`,
 or `tool` register/update command, ask the user for explicit approval and wait
