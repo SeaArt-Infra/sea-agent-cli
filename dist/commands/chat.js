@@ -10,6 +10,7 @@ Streaming is enabled by default. Use --no-stream when another agent needs raw JS
 
 Examples:
   seaagent chat run <agent-id> "hello"
+  seaagent chat run --model gpt-5.1-chat <agent-id> "test another model"
   seaagent chat run --no-stream <agent-id> "return JSON"
   seaagent chat run --ws <agent-id> "stream over WebSocket"
   seaagent chat run --agent-config-file examples/runtime-agent-config.json "Fetch https://example.com"
@@ -24,6 +25,7 @@ Examples:
         .argument("[message...]", "user message text")
         .option("-f, --agent-config-file <path>", "JSON/YAML runtime agent_config file")
         .option("--messages-file <path>", "JSON/YAML messages array or full chat payload file")
+        .option("--model <model>", "override the agent model for this chat run")
         .option("--no-stream", "disable streaming")
         .option("--ws", "use WebSocket streaming")
         .option("--stream-retries <number>", "stream reconnect attempts after interruption; -1 means unlimited", "-1")
@@ -32,6 +34,7 @@ Examples:
 
 Examples:
   seaagent chat run <agent-id> "Search recent AI news"
+  seaagent chat run --model gpt-5.1-chat <agent-id> "Compare this model"
   seaagent chat run --no-stream <agent-id> "Use one sentence"
   seaagent chat run --ws <agent-id> "Stream with WebSocket"
   seaagent chat run --stream-retries 5 <agent-id> "Reconnect at most five times"
@@ -54,6 +57,7 @@ Notes:
         const messages = await chatMessagesFromCommand(messageParts, options.messagesFile);
         const payload = {
             ...(agentID ? { agent_id: agentID } : {}),
+            ...(options.model?.trim() ? { model: options.model.trim() } : {}),
             ...(options.agentConfigFile ? { agent_config: await readPayload(options.agentConfigFile) } : {}),
             messages,
             stream: options.stream,
