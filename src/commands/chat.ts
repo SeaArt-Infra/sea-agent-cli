@@ -45,26 +45,20 @@ Examples:
 
 Notes:
   - Either [agent-id] or --agent-config-file is required.
-  - --messages-file accepts a messages array or an object with a messages field.
-  - With streaming enabled, stdout contains assistant text; stderr contains run_id, progress, tool status, and terminal usage when available.
-  - With --no-stream, stdout is gateway JSON enriched with response.message.content when stored events are available.`)
-    .action(async (agentID: string | undefined, messageParts: string[] | undefined, options: ChatRunOptions) => {
+  - --messages-file accepts a messages array, or an object containing a full ChatCompletionRequest payload.
+  - With streaming enabled, stdout contains assistant text; stderr contains run_id, progress, tool status, terminal usage, and langfuse_trace_id when available.
+  - With --no-stream, stdout is gateway JSON enriched with response.message.content and response.metadata.langfuse_trace_id when stored events are available.`)
+    .action(async function (this: Command, agentID: string | undefined, messageParts: string[] | undefined, options: ChatRunOptions) {
       const client = await AgentGatewayClient.fromConfig();
-      if (!agentID && !options.agentConfigFile) {
+      const payload = await chatPayloadFromCommand(agentID, messageParts, options, optionSource(this, "stream"));
+      const stream = chatPayloadStreamEnabled(payload);
+      if (!hasRunnableChatTarget(payload)) {
         throw new Error("agent-id or --agent-config-file is required");
       }
-      if (!options.stream && options.ws) {
-        throw new Error("--ws cannot be used with --no-stream");
+      if (!stream && options.ws) {
+        throw new Error("--ws cannot be used when stream is false");
       }
-      const messages = await chatMessagesFromCommand(messageParts, options.messagesFile);
-      const payload = {
-        ...(agentID ? { agent_id: agentID } : {}),
-        ...(options.model?.trim() ? { model: options.model.trim() } : {}),
-        ...(options.agentConfigFile ? { agent_config: await readPayload(options.agentConfigFile) } : {}),
-        messages,
-        stream: options.stream,
-      };
-      if (options.stream) {
+      if (stream) {
         const renderer = createChatStreamRenderer();
         try {
           await runChatStreamWithResume(client, payload, Boolean(options.ws), renderer, retryOptionsFromCommand(options));
@@ -154,6 +148,8 @@ type ChatStreamSnapshot = {
 
 type ChatUsage = Record<string, unknown>;
 
+type ChatPayload = Record<string, unknown>;
+
 type ChatStreamRenderer = {
   writeSSEChunk: (chunk: string) => void;
   writeWebSocketMessage: (message: string) => void;
@@ -164,23 +160,85 @@ type ChatStreamRenderer = {
 
 const CHAT_EVENTS_PAGE_LIMIT = 1000;
 
-async function chatMessagesFromCommand(messageParts: string[] | undefined, messagesFile?: string): Promise<unknown[]> {
-  if (!messagesFile) {
-    return [{ role: "user", content: (messageParts ?? []).join(" ") }];
+async function chatPayloadFromCommand(
+  agentID: string | undefined,
+  messageParts: string[] | undefined,
+  options: ChatRunOptions,
+  streamSource?: string,
+): Promise<ChatPayload> {
+  const payload = await baseChatPayloadFromCommand(messageParts, options.messagesFile);
+  if (agentID) {
+    payload.agent_id = agentID;
   }
-  const payload = await readPayload(messagesFile);
-  const messages = Array.isArray(payload) ? payload : objectMessages(payload);
-  if (!Array.isArray(messages) || messages.length === 0) {
-    throw new Error("--messages-file must contain a non-empty messages array");
+  if (options.model?.trim()) {
+    payload.model = options.model.trim();
   }
-  return messages;
+  if (options.agentConfigFile) {
+    payload.agent_config = await readPayload(options.agentConfigFile);
+  }
+  if (shouldApplyCommandStreamOption(payload, options.messagesFile, streamSource)) {
+    payload.stream = options.stream;
+  }
+  validateChatPayloadMessages(payload);
+  return payload;
 }
 
-function objectMessages(value: unknown): unknown {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return undefined;
+async function baseChatPayloadFromCommand(messageParts: string[] | undefined, messagesFile?: string): Promise<ChatPayload> {
+  if (!messagesFile) {
+    return {
+      messages: [{ role: "user", content: (messageParts ?? []).join(" ") }],
+    };
   }
-  return (value as { messages?: unknown }).messages;
+  const filePayload = await readPayload(messagesFile);
+  if (Array.isArray(filePayload)) {
+    return { messages: filePayload };
+  }
+  if (isPlainObject(filePayload)) {
+    return { ...filePayload };
+  }
+  throw new Error("--messages-file must contain a non-empty messages array or an object chat payload");
+}
+
+function shouldApplyCommandStreamOption(payload: ChatPayload, messagesFile: string | undefined, streamSource?: string): boolean {
+  if (!messagesFile) {
+    return true;
+  }
+  if (streamSource === "cli" || streamSource === "env") {
+    return true;
+  }
+  return payload.stream === undefined;
+}
+
+function validateChatPayloadMessages(payload: ChatPayload): void {
+  if (!Array.isArray(payload.messages) || payload.messages.length === 0) {
+    throw new Error("--messages-file must contain a non-empty messages array or an object with a non-empty messages array");
+  }
+}
+
+function chatPayloadStreamEnabled(payload: ChatPayload): boolean {
+  if (payload.stream === undefined) {
+    return true;
+  }
+  if (typeof payload.stream !== "boolean") {
+    throw new Error("chat payload stream must be a boolean when provided");
+  }
+  return payload.stream;
+}
+
+function hasRunnableChatTarget(payload: ChatPayload): boolean {
+  return stringField(payload, "agent_id") !== "" || payload.agent_config !== undefined;
+}
+
+function optionSource(command: Command, name: string): string | undefined {
+  const source = command.getOptionValueSource(name);
+  return source === null ? undefined : source;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  return true;
 }
 
 async function completeNonStreamingChatResponse(client: AgentGatewayClient, response: unknown): Promise<unknown> {
@@ -199,7 +257,8 @@ async function completeNonStreamingChatResponse(client: AgentGatewayClient, resp
   }
   const content = collectAssistantText(events);
   const failure = collectFailure(events);
-  if (!content && !failure) {
+  const traceID = collectLangfuseTraceID(events);
+  if (!content && !failure && !traceID) {
     return response;
   }
 
@@ -211,6 +270,10 @@ async function completeNonStreamingChatResponse(client: AgentGatewayClient, resp
   if (content) {
     const message = ensureObjectProperty(responseObject, "message");
     message.content = content;
+  }
+  if (traceID) {
+    const metadata = ensureObjectProperty(responseObject, "metadata");
+    metadata.langfuse_trace_id = traceID;
   }
   if (failure) {
     responseObject.error = compactObject({
@@ -469,6 +532,7 @@ function createChatStreamRenderer(initialRunID?: string, initialSeq = 0): ChatSt
   let terminal = false;
   let failure: Error | undefined;
   let usage: ChatUsage | undefined;
+  let langfuseTraceID: string | undefined;
 
   const handleEvent = (event: ChatStreamEvent): void => {
     runID = stringField(event.data, "run_id") || runID;
@@ -487,6 +551,7 @@ function createChatStreamRenderer(initialRunID?: string, initialSeq = 0): ChatSt
     if (isTerminalStreamEvent(event.event)) {
       terminal = true;
       usage = usageFromStreamEvent(event) || usage;
+      langfuseTraceID = langfuseTraceIDFromStreamEvent(event) || langfuseTraceID;
     }
     if (event.event === "chat.failed" || event.event === "response.failed" || event.event === "chat.cancelled" || event.event === "response.cancelled") {
       failure = errorFromStreamEvent(event);
@@ -536,6 +601,9 @@ function createChatStreamRenderer(initialRunID?: string, initialSeq = 0): ChatSt
       }
       if (usage) {
         process.stderr.write(`${formatUsageForDisplay(usage)}\n`);
+      }
+      if (langfuseTraceID) {
+        process.stderr.write(`[langfuse_trace_id ${langfuseTraceID}]\n`);
       }
     },
   };
@@ -753,6 +821,31 @@ function usageFromStreamEvent(event: ChatStreamEvent): ChatUsage | undefined {
     }
   }
   return undefined;
+}
+
+function collectLangfuseTraceID(events: ChatStreamEvent[]): string {
+  let traceID = "";
+  for (const event of events) {
+    traceID = langfuseTraceIDFromStreamEvent(event) || traceID;
+  }
+  return traceID;
+}
+
+function langfuseTraceIDFromStreamEvent(event: ChatStreamEvent): string {
+  for (const path of [
+    "metadata.langfuse_trace_id",
+    "response.metadata.langfuse_trace_id",
+    "response.response.metadata.langfuse_trace_id",
+    "data.metadata.langfuse_trace_id",
+    "data.response.metadata.langfuse_trace_id",
+    "data.response.response.metadata.langfuse_trace_id",
+  ]) {
+    const value = nestedValue(event.data, path);
+    if (typeof value === "string" && value.trim() !== "") {
+      return value.trim();
+    }
+  }
+  return "";
 }
 
 function normalizeUsage(value: unknown): ChatUsage | undefined {

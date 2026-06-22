@@ -189,11 +189,13 @@ seaagent chat run --agent-config-file examples/runtime-agent-config.json "Fetch 
 seaagent chat run --agent-config-file examples/runtime-agent-sandbox-config.json "Create a small React game"
 ```
 
-Send a complete messages array or payload file:
+Send a messages array or full chat payload file:
 
 ```bash
 seaagent chat run --messages-file examples/chat-multimodal.json <agent-id>
 ```
+
+Object payload files can include any `ChatCompletionRequest` fields, such as `agent_id`, `model`, `stream`, and `metadata.session_id` / `metadata.user_id`. Positional `<agent-id>`, `--model`, and `--agent-config-file` override the same fields from the file.
 
 Inspect and replay existing chats:
 
@@ -205,7 +207,7 @@ seaagent chat stream --ws <chat-id> --after-seq 12
 seaagent chat cancel <chat-id>
 ```
 
-Streaming writes assistant text to stdout. The CLI prints `run_id`, progress/tool status, and terminal usage to stderr when available. `--no-stream` prints gateway JSON and enriches stored success or failure details when chat events are available.
+Streaming writes assistant text to stdout. The CLI prints `run_id`, progress/tool status, terminal usage, and `langfuse_trace_id` to stderr when available. `--no-stream` prints gateway JSON and enriches stored success or failure details, including `response.metadata.langfuse_trace_id`, when chat events are available.
 
 For the chat response protocol, see [docs/agent-response-protocol.md](docs/agent-response-protocol.md).
 
