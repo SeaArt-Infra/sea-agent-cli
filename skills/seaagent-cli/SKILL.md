@@ -265,7 +265,7 @@ For gateway mutations, use this order:
    Use `seaagent agent get <agent-id>` when you need raw `model_config`, `system_prompt`, or stored `agent_config`.
 6. Run a lightweight smoke test before invoking expensive tools:
    ```bash
-   seaagent chat run --no-stream <agent-id> "请用一句话说明你能做什么，不要调用任何工具。"
+   seaagent chat run --no-stream <agent-id> "In one sentence, explain what you can do without calling any tools."
    ```
 
 On the current SeaArt gateway, agent `category` is constrained to `fabric` or `seaactor`. Use `fabric` for normal runnable assistants unless the user explicitly needs another category. A known-good model config for SeaArt media agents is:

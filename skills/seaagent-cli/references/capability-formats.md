@@ -464,7 +464,7 @@ Rules:
 
 - Positional `<agent-id>` sets `agent_id`.
 - `--agent-config-file` sets `agent_config` and allows running with inline runtime config instead of an agent id.
-- `--messages-file` sets `messages` from a JSON/YAML array or merges an object containing a full `ChatCompletionRequest` payload, including `metadata.session_id` / `metadata.user_id` and OpenAI-style multimodal content parts such as `{"type":"text","text":"描述这张图片"}` and `{"type":"image_url","image_url":{"url":"https://..."}}`.
+- `--messages-file` sets `messages` from a JSON/YAML array or merges an object containing a full `ChatCompletionRequest` payload, including `metadata.session_id` / `metadata.user_id` and OpenAI-style multimodal content parts such as `{"type":"text","text":"Describe this image"}` and `{"type":"image_url","image_url":{"url":"https://..."}}`.
 - `--no-stream` sets `stream: false`; when stored events are available, CLI enriches the JSON response with `response.message.content`.
 - `--ws` keeps streaming enabled and uses `GET /v1/chat/completions/ws`; the CLI sends the `ChatCompletionRequest` JSON as the first WebSocket message.
 - `chat stream --ws <chat-id>` uses `GET /v1/chats/{chat-id}/ws?after_seq=...` to replay an existing run over WebSocket.
@@ -482,7 +482,7 @@ seaagent skill list --provider <provider> --status active
 seaagent agent list --search <agent_name>
 seaagent agent get <agent-id>
 seaagent agent capabilities <agent-id>
-seaagent chat run --no-stream <agent-id> "请用一句话说明你能做什么，不要调用任何工具。"
+seaagent chat run --no-stream <agent-id> "In one sentence, explain what you can do without calling any tools."
 seaagent chat run <agent-id> "Test message"
 seaagent chat run --ws <agent-id> "Test message"
 ```

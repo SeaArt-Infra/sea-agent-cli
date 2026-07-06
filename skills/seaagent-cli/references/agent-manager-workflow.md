@@ -136,7 +136,7 @@ seaagent agent capabilities <agent-id>
 9. Run a no-tool smoke test before expensive workflows:
 
 ```bash
-seaagent chat run --no-stream <agent-id> "请用一句话说明你能做什么，不要调用任何工具。"
+seaagent chat run --no-stream <agent-id> "In one sentence, explain what you can do without calling any tools."
 ```
 
 ## Update Flow

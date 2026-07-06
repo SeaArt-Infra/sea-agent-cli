@@ -1,72 +1,72 @@
-# CLI 新人评审问题清单
+# CLI Newcomer Review Issue List
 
-记录基于“完全新人”视角使用 `seaagent` CLI 创建/验证 Agent 时暴露的问题。
+This document records issues found when using the `seaagent` CLI to create and validate Agents from the perspective of a complete newcomer.
 
-最近一次评审：`weather-agent` 场景，2026-05-21。
+Most recent review: `weather-agent` scenario, 2026-05-21.
 
-## 评审方法
+## Review Method
 
-- sub agent 只允许使用 `seaagent` CLI、help、README/examples 和只读查询命令。
-- sub agent 不读源码、不改代码，不执行 register/update 等网关写操作。
-- 主 agent 审查 sub agent 命令过程，并在必要时复测已有 Agent 的 chat 效果。
+- The sub-agent may use only the `seaagent` CLI, help output, README/examples, and read-only query commands.
+- The sub-agent does not read source code, modify code, or run gateway write operations such as register/update.
+- The main agent reviews the sub-agent command trace and, when needed, retests chat behavior for existing Agents.
 
-## Weather Agent 评审摘要
+## Weather Agent Review Summary
 
-只读发现到已有资源：
+Read-only discovery found these existing resources:
 
 - tool: `e6b281b2-9f7e-4e2f-9661-b2b9dbd3e512` (`weather_lookup`)
 - skill: `08c90395-4024-4e6e-8dce-d9bc72d6c2ce` (`weather_skill`)
 - agent: `c1bb1c13-f721-4948-92bb-8c0bbc532000` (`weather_assistant`)
 
-主 agent 复测：
+The main agent retested with:
 
 ```bash
 seaagent chat run --no-stream c1bb1c13-f721-4948-92bb-8c0bbc532000 "What's the current weather in Shanghai?"
 ```
 
-结果：
+Result:
 
-- `chat run --no-stream` 返回 `status: failed`，原始响应没有错误详情。
-- `chat events` 中可见真实失败原因为 `response.failed`:
+- `chat run --no-stream` returned `status: failed`, and the raw response did not include error details.
+- `chat events` showed the real failure reason in `response.failed`:
   `[Errno -2] Name or service not known`
-- 这说明 Agent/工具运行环境存在网络解析失败，同时 CLI 在非流式失败场景里没有把事件中的错误补回 JSON。
+- This indicates a DNS resolution failure in the Agent/tool runtime environment, and the CLI did not backfill the event error into the non-streaming JSON failure response.
 
-## 待修复 / 待验证
+## Pending Fixes / Pending Verification
 
-### 1. 网络错误裸输出，缺少诊断提示
+### 1. Network errors are printed raw without diagnostic guidance
 
-**严重度**：高
+**Severity**: high
 
-**来源**
+**Source**
 
-weather 评审中多次出现：
+The weather review repeatedly produced:
 
 ```text
 getaddrinfo ENOTFOUND openresty-gateway.gpu-service.dev.seaart.dev
 ```
 
-用户只能看到底层 DNS 错误，不知道当前请求的 endpoint、是否应该重试、是否该检查 config 或 health。
+Users only see the low-level DNS error. They do not know the current endpoint, whether the request is retryable, or whether they should check config or health.
 
-**期望**
+**Expected**
 
-网络请求失败时，CLI 应补充：
+When a network request fails, the CLI should add:
 
-- 请求方法和目标 endpoint/path
-- 建议运行 `seaagent config get`
-- 建议运行 `seaagent system health`
-- 明确“可重试”
+- request method and target endpoint/path
+- suggestion to run `seaagent config get`
+- suggestion to run `seaagent system health`
+- a clear retryability hint
 
-**状态**
+**Status**
 
-`fixed pending verification`：`src/lib/client.ts` 已为 HTTP 请求失败追加诊断提示。
+`fixed pending verification`: `src/lib/client.ts` now appends diagnostic guidance for HTTP request failures.
 
-### 2. `chat run --no-stream` 失败时不包含事件错误详情
+### 2. `chat run --no-stream` does not include event error details when a run fails
 
-**严重度**：高
+**Severity**: high
 
-**来源**
+**Source**
 
-weather agent 复测返回：
+The weather agent retest returned:
 
 ```json
 {
@@ -77,7 +77,7 @@ weather agent 复测返回：
 }
 ```
 
-但 `chat events` 里有：
+But `chat events` contained:
 
 ```json
 {
@@ -91,162 +91,162 @@ weather agent 复测返回：
 }
 ```
 
-**期望**
+**Expected**
 
-`--no-stream` enrichment 不只拼接成功文本，也要在失败时把 `response.failed` / `chat.failed` 的错误补到：
+`--no-stream` enrichment should not only stitch together successful text. When a run fails, it should also copy errors from `response.failed` / `chat.failed` into:
 
 - `response.error`
 - `error_message`
-- `error_code`（如果有）
+- `error_code` when available
 
-**状态**
+**Status**
 
-`fixed pending verification`：`src/commands/chat.ts` 已解析嵌套 `response.error` 并补回非流式 JSON。
+`fixed pending verification`: `src/commands/chat.ts` now parses nested `response.error` and backfills it into non-streaming JSON.
 
-### 3. 缺少 task-oriented Agent 创建示例
+### 3. Task-oriented Agent creation examples are missing
 
-**严重度**：中
+**Severity**: medium
 
-**来源**
+**Source**
 
-sub agent 找到的 examples 都是 web/sandbox。新人要创建 weather agent 时，需要自己从 web 示例类推：
+The sub-agent found only web/sandbox examples. When creating a weather agent, a newcomer has to infer the workflow from web examples:
 
-- 如何先搜索已有 tool/skill
-- 如何复用已有 skill UUID 创建 agent
-- 最小 agent payload 需要哪些字段
+- how to search existing tools/skills first
+- how to reuse an existing Skill UUID when creating an Agent
+- which fields are required in a minimal Agent payload
 
-**期望**
+**Expected**
 
-至少补一个“复用已有 skill 创建 agent”的流程，weather/currency 这类 utility agent 都可以。
+Add at least one workflow that reuses an existing Skill to create an Agent. Weather or currency utility agents would both work.
 
-**状态**
+**Status**
 
-`partially fixed`：`agent register --help` 已补最小 payload 和复用 skill UUID 提示。仍建议后续补 README task-oriented workflow。
+`partially fixed`: `agent register --help` now includes a minimal payload and a hint about reusing Skill UUIDs. A task-oriented README workflow is still recommended.
 
-### 4. `agent --help` 顶层不展示 list 常用过滤项
+### 4. Top-level `agent --help` does not show common list filters
 
-**严重度**：中
+**Severity**: medium
 
-**来源**
+**Source**
 
-sub agent 使用了 `agent list --search weather`，但这是从其它命令类推出来的；`seaagent agent --help` 顶层原本没有直接展示 `--search / --status / --owner-id / --category`。
+The sub-agent used `agent list --search weather`, but inferred it from other commands. The top-level `seaagent agent --help` originally did not show `--search / --status / --owner-id / --category` directly.
 
-**期望**
+**Expected**
 
-顶层 `agent --help` 直接展示常用 list filters，降低发现成本。
+Top-level `agent --help` should show common list filters to improve discoverability.
 
-**状态**
+**Status**
 
-`fixed pending verification`：`src/commands/agent.ts` 已在顶层 help 增加 Common list filters。
+`fixed pending verification`: `src/commands/agent.ts` now adds Common list filters to top-level help.
 
-### 5. `config get` 不显示 `userId` 缺失风险
+### 5. `config get` does not show the risk of a missing `userId`
 
-**严重度**：中
+**Severity**: medium
 
-**来源**
+**Source**
 
-sub agent 看到 `config get` 没有 `userId`，但不知道 register/update 会不会受影响。
+The sub-agent noticed that `config get` did not show `userId`, but could not tell whether register/update operations would be affected.
 
-**期望**
+**Expected**
 
-`config get` 应显式显示 `userId: null`，并提示 registry ownership-sensitive 操作可能使用 gateway 默认归属。
+`config get` should explicitly show `userId: null` and warn that registry ownership-sensitive operations may use the gateway default owner.
 
-**状态**
+**Status**
 
-`fixed pending verification`：`src/commands/config.ts` 已输出 `userId: null` 和 warnings。
+`fixed pending verification`: `src/commands/config.ts` now prints `userId: null` and warnings.
 
-### 6. list 表格对嵌套字段折叠为 `[Object]`
+### 6. List tables collapse nested fields to `[Object]`
 
-**严重度**：中
+**Severity**: medium
 
-**来源**
+**Source**
 
-`tool list`、`skill list`、`agent list` 使用 console.table 时，`openai_schema`、`manifest`、`metadata`、`agent_config` 等字段显示为 `[Object]`。
+`tool list`, `skill list`, and `agent list` use `console.table`, so fields such as `openai_schema`, `manifest`, `metadata`, and `agent_config` appear as `[Object]`.
 
-**影响**
+**Impact**
 
-新人需要额外 `get` 才能看 tool 参数、skill 绑定和 agent 配置。
+Newcomers need to run an additional `get` command to inspect tool parameters, Skill bindings, and Agent config.
 
-**可能修复**
+**Possible Fixes**
 
-- 增加通用 `--json` 输出模式。
-- 或 list 表格只展示最重要的摘要字段，例如 tool required params、skill required tool ids、agent skill ids。
+- Add a common `--json` output mode.
+- Or make list tables show only the most useful summary fields, such as required tool params, Skill required tool IDs, and Agent Skill IDs.
 
-**状态**
+**Status**
 
 `todo`
 
-### 7. `tool resolve` 与 `tool get` 边界仍不够清楚
+### 7. The boundary between `tool resolve` and `tool get` is still unclear
 
-**严重度**：低
+**Severity**: low
 
-**来源**
+**Source**
 
-sub agent 认为两者输出高度接近，不清楚什么时候必须 resolve。
+The sub-agent found the outputs very similar and was unsure when `resolve` is required.
 
-**当前说明**
+**Current Explanation**
 
-`tool resolve --help` 已写：
+`tool resolve --help` now says:
 
 > Use resolve before binding a tool into a skill. It prints the normalized runtime metadata that Agent Worker receives.
 
-**状态**
+**Status**
 
-`watch`：暂不改代码；后续如多次评审仍困惑，再补 README workflow。
+`watch`: do not change code for now. If later reviews show repeated confusion, add a README workflow note.
 
-### 8. 缺少明确的 smoke-test 工作流
+### 8. The smoke-test workflow is not explicit enough
 
-**严重度**：低
+**Severity**: low
 
-**来源**
+**Source**
 
-sub agent 不确定 `chat run` 是否算“只读验证”，因为它会创建 chat run。
+The sub-agent was unsure whether `chat run` counts as read-only validation because it creates a chat run record.
 
-**说明**
+**Explanation**
 
-Chat run 本质会创建 run 记录，但不是 registry mutation；可作为 smoke test。需要在评审协议和 README 里说明。
+Chat run creates a run record, but it is not a registry mutation. It can be used as a smoke test. The review protocol and README should state this explicitly.
 
-**状态**
+**Status**
 
 `todo`
 
-## 已修复 / 已缓解
+## Fixed / Mitigated
 
-### A. `agent` 命令缺少 `get`
+### A. The `agent` command was missing `get`
 
-原问题：`tool get` 和 `skill get` 存在，但 `agent get` 缺失。
+Original issue: `tool get` and `skill get` existed, but `agent get` was missing.
 
-状态：`fixed`
+Status: `fixed`
 
-- CLI 已增加 `seaagent agent get <agent-id>`
-- agent-gateway 已增加 `GET /v1/agents/:agentID`
-- agent-sdk-go/js、skill-hub、web 文档已同步
+- CLI now includes `seaagent agent get <agent-id>`
+- agent-gateway now includes `GET /v1/agents/:agentID`
+- agent-sdk-go/js, skill-hub, and web docs have been synchronized
 
-### B. `chat events` 默认 `--limit 100` 会静默截断
+### B. `chat events` default `--limit 100` silently truncated results
 
-状态：`fixed`
+Status: `fixed`
 
-- 默认 limit 已调整为 `1000`
-- 刚好返回 `--limit` 条时会提示继续分页
+- Default limit is now `1000`
+- The CLI warns when exactly `--limit` items are returned and additional pages may exist
 
-### C. `chat run --no-stream` 成功场景不含 Agent 实际回复
+### C. Successful `chat run --no-stream` output did not include the Agent's actual reply
 
-状态：`fixed`
+Status: `fixed`
 
-- `--no-stream` 会读取 stored events 并把文本增量补到 `response.message.content`
-- 本轮新增失败场景补错见上文第 2 项
+- `--no-stream` reads stored events and backfills text deltas into `response.message.content`
+- The failed-run enrichment added in this review is covered in item 2 above
 
-### D. `register` 400 报错对字段问题提示不足
+### D. `register` 400 errors did not explain field-level problems well enough
 
-状态：`partially fixed`
+Status: `partially fixed`
 
-- `src/lib/client.ts` 已展开 `message/detail/details/errors`
-- register 400 泛化错误会提示查看对应 examples
-- 尚未做完整本地 schema 预校验
+- `src/lib/client.ts` now expands `message/detail/details/errors`
+- Generic register 400 errors now suggest checking the relevant examples
+- Full local schema prevalidation has not been implemented
 
-### E. `provider` 字段被网关规范化为 UUID 没说明
+### E. Provider normalization to UUID was not explained
 
-状态：`fixed`
+Status: `fixed`
 
-- `tool register` / `skill register` help 已补说明
-- 注册返回中发现 provider 变化时，CLI 会向 stderr 输出 info
+- `tool register` / `skill register` help now explains this behavior
+- When a registration response shows that `provider` changed, the CLI prints an info message to stderr

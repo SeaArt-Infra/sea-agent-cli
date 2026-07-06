@@ -1,21 +1,21 @@
-# Agent 返回协议
+# Agent Response Protocol
 
-本文档整理 `agent-gateway` 当前对外暴露的 Agent Chat 返回协议，以及 `seaagent` CLI 对这些返回的处理方式。
+This document summarizes the current Agent Chat response protocol exposed by `agent-gateway` and how the `seaagent` CLI handles those responses.
 
-## 适用范围
+## Scope
 
-这里的“返回协议”指 Agent Chat 接口返回给调用方的协议，包括：
+In this document, "response protocol" refers to the protocol returned by Agent Chat APIs to callers, including:
 
-- `POST /v1/chat/completions` 的非流式 JSON 返回。
-- `POST /v1/chat/completions` 的 SSE 流式返回。
-- `GET /v1/chat/completions/ws` 和 `GET /v1/chats/{chat-id}/ws` 的 WebSocket 返回。
-- `GET /v1/chats/{chat-id}`、`GET /v1/chats/{chat-id}/events`、`GET /v1/chats/{chat-id}/stream` 的历史查询和回放返回。
+- Non-streaming JSON responses from `POST /v1/chat/completions`.
+- SSE streaming responses from `POST /v1/chat/completions`.
+- WebSocket responses from `GET /v1/chat/completions/ws` and `GET /v1/chats/{chat-id}/ws`.
+- Historical query and replay responses from `GET /v1/chats/{chat-id}`, `GET /v1/chats/{chat-id}/events`, and `GET /v1/chats/{chat-id}/stream`.
 
-不包含 Tool 自身的 `response_mode` 协议。`response_mode` 是 Tool 调用返回解析方式，不是 Agent 最终回复协议。
+This does not cover a Tool's own `response_mode` protocol. `response_mode` describes how Tool-call responses are parsed; it is not the Agent final-response protocol.
 
-## 请求结构
+## Request Shape
 
-`chat run` 会组装为 `ChatCompletionRequest`：
+`chat run` builds a `ChatCompletionRequest`:
 
 ```json
 {
@@ -34,16 +34,16 @@
 }
 ```
 
-字段说明：
+Field notes:
 
-- `agent_id`：已注册 Agent 的 ID 或 key。
-- `agent_config`：内联运行时 Agent 配置。不能和 `agent_id` 同时使用。
-- `messages`：对话消息数组。
-- `stream`：是否流式返回。缺省时按流式处理。
-- `category`：调度类别，当前有效值为 `fabric` 或 `seaactor`。
-- `metadata`：透传上下文，例如 `session_id`、`user_id`、`api_key` 等。
+- `agent_id`: registered Agent ID or key.
+- `agent_config`: inline runtime Agent config. It cannot be used together with `agent_id`.
+- `messages`: conversation message array.
+- `stream`: whether to return a streaming response. The CLI treats requests as streaming by default.
+- `category`: scheduling category. Current valid values are `fabric` and `seaactor`.
+- `metadata`: pass-through context such as `session_id`, `user_id`, and `api_key`.
 
-`messages[].content` 兼容 OpenAI 风格的字符串或多模态 content parts 数组：
+`messages[].content` supports either an OpenAI-style string or an array of multimodal content parts:
 
 ```json
 {
@@ -51,7 +51,7 @@
     {
       "role": "user",
       "content": [
-        {"type": "text", "text": "描述这张图片"},
+        {"type": "text", "text": "Describe this image"},
         {"type": "image_url", "image_url": {"url": "https://image.cdn2.seaart.me/static/infra/agent-chat/user-11/image/20260529/e4fc53aac523b4f56e582a65a717381a.png"}}
       ]
     }
@@ -59,11 +59,11 @@
 }
 ```
 
-CLI 可用 `seaagent chat run --messages-file examples/chat-multimodal.json <agent-id>` 发送完整消息数组。
+Use `seaagent chat run --messages-file examples/chat-multimodal.json <agent-id>` to send a full message array from the CLI.
 
-## 非流式返回
+## Non-Streaming Response
 
-当 `stream: false` 时，接口返回 `ChatCompletionResponse`：
+When `stream: false`, the API returns `ChatCompletionResponse`:
 
 ```json
 {
@@ -78,16 +78,16 @@ CLI 可用 `seaagent chat run --messages-file examples/chat-multimodal.json <age
 }
 ```
 
-字段说明：
+Field notes:
 
-- `run_id`：本次 Agent 运行 ID。
-- `status`：运行状态，取值为 `queued`、`running`、`completed`、`failed`、`cancelled`。
-- `response`：最终响应事件中的 `data` 内容。来源于缓存事件里的 `chat.response` 或 `response.completed`。
-- `finish_reason`：完成原因。
-- `error_code`：失败时的错误码。
-- `error_message`：失败时的错误信息。
+- `run_id`: ID of this Agent run.
+- `status`: run status. Values are `queued`, `running`, `completed`, `failed`, and `cancelled`.
+- `response`: `data` content from the final response event. It comes from cached `chat.response` or `response.completed` events.
+- `finish_reason`: completion reason.
+- `error_code`: error code when the run fails.
+- `error_message`: error message when the run fails.
 
-失败示例：
+Failure example:
 
 ```json
 {
@@ -98,9 +98,9 @@ CLI 可用 `seaagent chat run --messages-file examples/chat-multimodal.json <age
 }
 ```
 
-## SSE 流式返回
+## SSE Streaming Response
 
-流式 HTTP 返回使用标准 SSE block：
+Streaming HTTP responses use standard SSE blocks:
 
 ```text
 event: response.output_text.delta
@@ -113,31 +113,31 @@ event: response.completed
 data: {"content":"hello world"}
 ```
 
-当前 CLI 会识别以下文本增量事件：
+The CLI currently recognizes these text-delta events:
 
-- `response.text.delta`：读取 `data.delta`。
-- `response.output_text.delta`：读取 `data.delta`。
-- `chat.response`：依次读取 `data.content`、`data.text`、`data.delta`。
-- `message.delta`：依次读取 `data.content`、`data.text`、`data.delta`。
+- `response.text.delta`: reads `data.delta`.
+- `response.output_text.delta`: reads `data.delta`.
+- `chat.response`: reads `data.content`, then `data.text`, then `data.delta`.
+- `message.delta`: reads `data.content`, then `data.text`, then `data.delta`.
 
-终态事件：
+Terminal events:
 
-- `chat.response`：可作为最终响应事件。
-- `response.completed`：可作为最终响应事件。
-- `chat.failed`：运行失败。
-- `chat.cancelled`：运行取消。
+- `chat.response`: may be used as the final response event.
+- `response.completed`: may be used as the final response event.
+- `chat.failed`: run failed.
+- `chat.cancelled`: run was cancelled.
 
-Sandbox Agent 事件：
+Sandbox Agent events:
 
-- `chat.sandbox.creating`：gateway 已根据 `agent_config.runtime.sandbox` 创建 sandbox run，事件中会带 `sandbox_run_id` / `game_run_id`。
-- `chat.sandbox.ready`：sandbox 已可用，事件中会带 `sandbox_run_id`、`workspace_root`、`preview_url`、`preview_port` 等字段。
-- `chat.sandbox.failed`：sandbox 创建或就绪失败，事件中会带 `error_code` / `error_message`。
+- `chat.sandbox.creating`: the gateway has created a sandbox run from `agent_config.runtime.sandbox`; the event includes `sandbox_run_id` / `game_run_id`.
+- `chat.sandbox.ready`: the sandbox is ready; the event includes fields such as `sandbox_run_id`, `workspace_root`, `preview_url`, and `preview_port`.
+- `chat.sandbox.failed`: sandbox creation or readiness failed; the event includes `error_code` / `error_message`.
 
-`runtime.sandbox` 是 Agent 的运行类型标记，不使用 `enabled` 字段；对象存在即表示该 Agent 需要自动拉起 sandbox。普通 Agent 不配置 `runtime.sandbox`。
+`runtime.sandbox` is an Agent runtime-type marker. It does not use an `enabled` field; the presence of the object means this Agent should automatically start a sandbox. Normal Agents do not configure `runtime.sandbox`.
 
-## WebSocket 返回
+## WebSocket Response
 
-WebSocket 返回每条消息是 JSON：
+Each WebSocket message is JSON:
 
 ```json
 {
@@ -148,7 +148,7 @@ WebSocket 返回每条消息是 JSON：
 }
 ```
 
-错误消息格式：
+Error message shape:
 
 ```json
 {
@@ -158,13 +158,13 @@ WebSocket 返回每条消息是 JSON：
 }
 ```
 
-CLI 收到 `event: "error"` 时会抛出错误；其他事件按 SSE 相同的文本提取规则渲染。
+When the CLI receives `event: "error"`, it throws an error. Other events are rendered with the same text extraction rules used for SSE.
 
-## 历史查询和回放
+## Historical Query and Replay
 
-### 查询运行状态
+### Query Run Status
 
-`GET /v1/chats/{chat-id}` 返回 `ChatMeta`：
+`GET /v1/chats/{chat-id}` returns `ChatMeta`:
 
 ```json
 {
@@ -187,9 +187,9 @@ CLI 收到 `event: "error"` 时会抛出错误；其他事件按 SSE 相同的�
 }
 ```
 
-### 查询事件列表
+### Query Event List
 
-`GET /v1/chats/{chat-id}/events` 返回事件记录：
+`GET /v1/chats/{chat-id}/events` returns event records:
 
 ```json
 {
@@ -208,54 +208,53 @@ CLI 收到 `event: "error"` 时会抛出错误；其他事件按 SSE 相同的�
 }
 ```
 
-### 回放流
+### Replay Stream
 
-`GET /v1/chats/{chat-id}/stream` 按 SSE 格式回放历史事件。
+`GET /v1/chats/{chat-id}/stream` replays historical events in SSE format.
 
-`GET /v1/chats/{chat-id}/ws?after_seq=...` 按 WebSocket JSON 消息格式回放历史事件。
+`GET /v1/chats/{chat-id}/ws?after_seq=...` replays historical events in WebSocket JSON message format.
 
-## CLI 行为
+## CLI Behavior
 
-`seaagent chat run` 默认流式：
+`seaagent chat run` streams by default:
 
 ```bash
 seaagent chat run <agent-id> "hello"
 ```
 
-默认流式模式下，CLI 把文本增量写到 stdout，不显示完整事件 envelope。CLI 会在 stderr 显示 `run_id`；如果终态事件里包含 `usage`，流式结束后也会在 stderr 显示 usage 摘要。
+In default streaming mode, the CLI writes text deltas to stdout and does not display the full event envelope. The CLI prints `run_id` to stderr when known. If the terminal event includes `usage`, the CLI also prints a usage summary to stderr after streaming ends.
 
-CLI 会记录流式事件里的 `run_id` 和 SSE/WebSocket 事件序号。连接异常结束且运行还没有进入终态时，CLI 默认无限自动重连，并通过 `GET /v1/chats/{chat-id}/stream?after_seq=...` 或 WebSocket 续传，不会重新创建 Agent 任务。可用 `--stream-retries <n>` 限制次数，`--stream-retries 0` 表示不自动续流。
+The CLI records the `run_id` and SSE/WebSocket event sequence numbers from streaming events. If the connection closes abnormally before the run reaches a terminal state, the CLI automatically reconnects without a retry limit by default and resumes through `GET /v1/chats/{chat-id}/stream?after_seq=...` or WebSocket replay. It does not create a new Agent task. Use `--stream-retries <n>` to limit retries; `--stream-retries 0` disables automatic stream resume.
 
 ```bash
 seaagent chat run <agent-id> "long task"
 seaagent chat stream <chat-id> --after-seq 12
 ```
 
-非流式模式：
+Non-streaming mode:
 
 ```bash
 seaagent chat run --no-stream <agent-id> "hello"
 ```
 
-非流式模式下，CLI 打印完整 JSON `ChatCompletionResponse`。
-如果返回里包含 `run_id`，CLI 会额外读取该 run 的历史事件并拼接文本增量；
-成功拼到最终文本时，会补充到 `response.message.content`，方便脚本直接读取 Agent 实际回复。
-失败时，如果历史事件包含 `response.failed` / `chat.failed` 等错误事件，
-CLI 会尽量补充 `response.error`、`error_message`、`error_code`。
+In non-streaming mode, the CLI prints the full `ChatCompletionResponse` JSON.
+When the response includes `run_id`, the CLI additionally reads historical events for that run and stitches together text deltas.
+When the final text is successfully reconstructed, it is added to `response.message.content` so scripts can read the Agent's actual reply directly.
+If the run fails and historical events contain error events such as `response.failed` / `chat.failed`, the CLI tries to backfill `response.error`, `error_message`, and `error_code`.
 
-WebSocket 模式：
+WebSocket mode:
 
 ```bash
 seaagent chat run --ws <agent-id> "hello"
 ```
 
-WebSocket 模式下，CLI 发送同一份 `ChatCompletionRequest` 作为首条 WebSocket 消息，然后按事件流渲染文本。
+In WebSocket mode, the CLI sends the same `ChatCompletionRequest` as the first WebSocket message, then renders text from the event stream.
 
-## Agent 最终内容格式
+## Agent Final Content Format
 
-当前 Agent 最终内容本身没有独立的结构化 schema 字段，例如没有 `output_schema` 或 `response_schema`。
+The Agent final content itself currently has no independent structured schema field; for example, there is no `output_schema` or `response_schema`.
 
-如果业务需要稳定的最终答案格式，应通过 Agent `system_prompt` 或 Skill `instruction` 约束，例如要求最终只返回 JSON：
+If a business flow needs a stable final-answer format, constrain it through the Agent `system_prompt` or Skill `instruction`. For example, require the final answer to be JSON only:
 
 ```json
 {
@@ -266,11 +265,11 @@ WebSocket 模式下，CLI 发送同一份 `ChatCompletionRequest` 作为首条 W
 }
 ```
 
-这种格式约束属于提示词协议，gateway 当前不会自动校验。
+This kind of format constraint is part of the prompt contract. The gateway does not currently validate it automatically.
 
-## 代码位置
+## Code Locations
 
-- CLI chat 命令和流式渲染：`src/commands/chat.ts`
-- Chat 请求和返回模型：`agent-gateway/internal/models/chat.go`
-- Chat 响应缓存和终态提取：`agent-gateway/internal/services/chat_service.go`
-- CLI chat payload 说明：`skills/seaagent-cli/references/capability-formats.md`
+- CLI chat command and streaming renderer: `src/commands/chat.ts`
+- Chat request and response models: `agent-gateway/internal/models/chat.go`
+- Chat response cache and terminal-state extraction: `agent-gateway/internal/services/chat_service.go`
+- CLI chat payload reference: `skills/seaagent-cli/references/capability-formats.md`
