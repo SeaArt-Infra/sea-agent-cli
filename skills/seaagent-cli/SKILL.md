@@ -278,7 +278,7 @@ On the current SeaArt gateway, agent `category` is constrained to `fabric` or `s
 }
 ```
 
-`reasoning_effort` is optional. Supported values are `minimal`, `low`, `medium`, and `high`; the gateway forwards it to the Agent Worker as the top-level `reasoning_effort`.
+`reasoning_effort` is optional. Supported values are `minimal`, `low`, `medium`, and `high`; the gateway forwards it to the Agent Worker as `agent.reasoning_effort`.
 
 If a newly registered agent times out even on the no-tool smoke test, update it with the low-level `agent update` shape and set `category: "fabric"` plus the model config above, then retest before debugging tools.
 
