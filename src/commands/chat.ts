@@ -14,6 +14,7 @@ Examples:
   seaagent chat run --model gpt-5.1-chat <agent-id> "test another model"
   seaagent chat run --no-stream <agent-id> "return JSON"
   seaagent chat run --ws <agent-id> "stream over WebSocket"
+  seaagent chat run --skill-id <skill-id> <agent-id> "run with an extra skill"
   seaagent chat run --agent-config-file examples/runtime-agent-config.json "Fetch https://example.com"
   seaagent chat run --messages-file examples/chat-multimodal.json <agent-id>
   seaagent chat events <chat-id> --after-seq 12
@@ -27,6 +28,7 @@ Examples:
     .argument("[message...]", "user message text")
     .option("-f, --agent-config-file <path>", "JSON/YAML runtime agent_config file")
     .option("--messages-file <path>", "JSON/YAML messages array or full chat payload file")
+    .option("--skill-id <id>", "temporary Skill UUID to mount for this chat; repeat for multiple Skills", collectSkillIDOption, [])
     .option("--model <model>", "override the agent model for this chat run")
     .option("--no-stream", "disable streaming")
     .option("--ws", "use WebSocket streaming")
@@ -39,12 +41,14 @@ Examples:
   seaagent chat run --model gpt-5.1-chat <agent-id> "Compare this model"
   seaagent chat run --no-stream <agent-id> "Use one sentence"
   seaagent chat run --ws <agent-id> "Stream with WebSocket"
+  seaagent chat run --skill-id 11111111-1111-1111-1111-111111111111 <agent-id> "Use the extra skill"
   seaagent chat run --stream-retries 5 <agent-id> "Reconnect at most five times"
   seaagent chat run --agent-config-file examples/runtime-agent-config.json "Fetch https://example.com"
   seaagent chat run --messages-file examples/chat-multimodal.json <agent-id>
 
 Notes:
   - Either [agent-id] or --agent-config-file is required.
+  - --skill-id can be repeated and sends skill_ids with agent_id for one-off extra Skills; IDs must be active visible UUIDs, capped at 20, and cannot be used with --agent-config-file or payload agent_config.
   - --messages-file accepts a messages array, or an object containing a full ChatCompletionRequest payload.
   - With streaming enabled, stdout contains assistant text; stderr contains run_id, progress, tool status, terminal usage, and langfuse_trace_id when available.
   - With --no-stream, stdout is gateway JSON enriched with response.message.content and response.metadata.langfuse_trace_id when stored events are available.`)
@@ -121,6 +125,7 @@ Examples:
 type ChatRunOptions = {
   agentConfigFile?: string;
   messagesFile?: string;
+  skillId?: string[];
   model?: string;
   stream: boolean;
   ws?: boolean;
@@ -160,6 +165,10 @@ type ChatStreamRenderer = {
 
 const CHAT_EVENTS_PAGE_LIMIT = 1000;
 
+function collectSkillIDOption(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
 async function chatPayloadFromCommand(
   agentID: string | undefined,
   messageParts: string[] | undefined,
@@ -176,9 +185,13 @@ async function chatPayloadFromCommand(
   if (options.agentConfigFile) {
     payload.agent_config = await readPayload(options.agentConfigFile);
   }
+  if (options.skillId?.length) {
+    payload.skill_ids = normalizeChatSkillIDs(options.skillId);
+  }
   if (shouldApplyCommandStreamOption(payload, options.messagesFile, streamSource)) {
     payload.stream = options.stream;
   }
+  validateChatPayloadSkillIDs(payload);
   validateChatPayloadMessages(payload);
   return payload;
 }
@@ -213,6 +226,40 @@ function validateChatPayloadMessages(payload: ChatPayload): void {
   if (!Array.isArray(payload.messages) || payload.messages.length === 0) {
     throw new Error("--messages-file must contain a non-empty messages array or an object with a non-empty messages array");
   }
+}
+
+function normalizeChatSkillIDs(values: unknown): string[] {
+  if (!Array.isArray(values)) {
+    throw new Error("chat payload skill_ids must be an array of strings");
+  }
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  for (const value of values) {
+    if (typeof value !== "string") {
+      throw new Error("chat payload skill_ids must be an array of strings");
+    }
+    const id = value.trim();
+    if (!id) {
+      throw new Error("chat payload skill_ids cannot contain empty ids");
+    }
+    if (seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+  return ids;
+}
+
+function validateChatPayloadSkillIDs(payload: ChatPayload): void {
+  if (payload.skill_ids === undefined) return;
+  const ids = normalizeChatSkillIDs(payload.skill_ids);
+  if (ids.length === 0) {
+    delete payload.skill_ids;
+    return;
+  }
+  if (payload.agent_config !== undefined) {
+    throw new Error("skill_ids can only be used with agent_id; remove --agent-config-file or payload agent_config");
+  }
+  payload.skill_ids = ids;
 }
 
 function chatPayloadStreamEnabled(payload: ChatPayload): boolean {

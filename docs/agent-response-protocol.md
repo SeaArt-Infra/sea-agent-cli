@@ -21,8 +21,8 @@ This does not cover a Tool's own `response_mode` protocol. `response_mode` descr
 {
   "request_id": "optional-request-id",
   "agent_id": "owner_id:agent_name:v1",
+  "skill_ids": ["11111111-1111-1111-1111-111111111111"],
   "category": "fabric",
-  "agent_config": {},
   "messages": [
     {
       "role": "user",
@@ -38,6 +38,7 @@ Field notes:
 
 - `agent_id`: registered Agent ID or key.
 - `agent_config`: inline runtime Agent config. It cannot be used together with `agent_id`.
+- `skill_ids`: optional temporary Skill UUIDs for this chat run, used when a registered Agent needs one-off extra capabilities without changing its saved configuration. Use only with `agent_id`; `agent_config + skill_ids` is rejected. Gateway accepts at most 20 IDs, requires each Skill to be active and visible to the caller, merges them after the registered Agent's own Skills, dedupes repeated IDs, and only lets Skill runtime config fill Agent defaults that are unset.
 - `messages`: conversation message array.
 - `stream`: whether to return a streaming response. The CLI treats requests as streaming by default.
 - `category`: scheduling category. Current valid values are `fabric` and `seaactor`.
