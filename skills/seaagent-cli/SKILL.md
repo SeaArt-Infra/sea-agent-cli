@@ -1,7 +1,7 @@
 ---
 name: seaagent-cli
 description: "Use this skill when working with the local seaagent CLI for SeaArt agent-gateway: configuring endpoints and API keys, registering/updating/deleting tools, skills, and agents, listing catalog entries, resolving runtime configs, and running or inspecting chats."
-version: "2026.06.11"
+version: "2026.07.14"
 ---
 
 # Seaagent CLI
@@ -181,13 +181,11 @@ Hooks:
 
 ```bash
 seaagent hook register -f <payload.json|yaml>
-seaagent hook list [--search <value>] [--limit <n>] [--offset <n>]
-seaagent hook get <hook-id>
-seaagent hook update <hook-id> -f <payload.json|yaml>
-seaagent hook delete <hook-id>
+seaagent hook update -f <payload.json|yaml>
+seaagent hook delete
 ```
 
-Hook commands use the configured API key as `Authorization: Bearer <api-key>`. Hook payload files do not include `api_key`; the gateway stores only a hash of the header key. The worker receives the hook endpoint in `agent.hooks[]`, calls it with fixed `POST`, and sends all events so the hook service can filter by payload `event_id`.
+Hook commands use the configured API key as `Authorization: Bearer <api-key>` and manage the single active Hook owned by that key. Registration creates it and returns `409 Conflict` when one is already active; after deletion, the same API key can register again. Hook payload fields are `name`, `endpoint`, and `description`. In phase one, Worker calls the endpoint with fixed `POST` only for `multimodal.charge.reserve`. Callback `metadata` comes from the individual chat request. Its event-specific request and response contract is defined in `references/capability-formats.md`.
 
 Chat:
 
@@ -356,10 +354,8 @@ Long media-generation requests can exceed the front proxy timeout and return `50
 - `agent capabilities` -> `GET /v1/agents/{agent-id}/capabilities`
 - `agent delete` -> `DELETE /v1/agents/{agent-id}`
 - `hook register` -> `POST /v1/hooks/register`
-- `hook list` -> `GET /v1/hooks`
-- `hook get` -> `GET /v1/hooks/{hook-id}`
-- `hook update` -> `PUT /v1/hooks/{hook-id}`
-- `hook delete` -> `DELETE /v1/hooks/{hook-id}`
+- `hook update` -> `PUT /v1/hooks`
+- `hook delete` -> `DELETE /v1/hooks`
 - `chat run` -> `POST /v1/chat/completions`
 - `chat run --ws` -> `GET /v1/chat/completions/ws`; sends the `ChatCompletionRequest` JSON as the first WebSocket message
 - `chat get` -> `GET /v1/chats/{chat-id}`

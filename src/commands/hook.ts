@@ -2,24 +2,25 @@ import { Command } from "commander";
 import { AgentGatewayClient } from "../lib/client.js";
 import { readPayload } from "../lib/files.js";
 import { addHelpText, payloadFileHelp } from "../lib/help.js";
-import { printJSON, printTable } from "../lib/output.js";
+import { printJSON } from "../lib/output.js";
 
 export function hookCommand(): Command {
-  const cmd = addHelpText(new Command("hook").description("Register and manage Agent Worker hooks for the configured API key"), `
-Hooks are owned by the configured API key. Hook payload files do not include
-api_key; the CLI sends the configured key as Authorization: Bearer <api-key>.
+  const cmd = addHelpText(new Command("hook").description("Manage the multimodal charge reservation hook for the configured API key"), `
+Hooks are owned by the configured API key. Payload fields are name, endpoint,
+and description. The CLI sends the configured key as Authorization:
+Bearer <api-key>.
 
 ${payloadFileHelp}
 
 Examples:
   seaagent hook register -f examples/hook.json
-  seaagent hook list
-  seaagent hook get <hook-id>
+  seaagent hook update -f examples/hook.json
+  seaagent hook delete
 `);
 
   cmd
     .command("register")
-    .description("Register or update the hook for the configured API key")
+    .description("Register the hook for the configured API key")
     .requiredOption("-f, --file <path>", "JSON/YAML hook payload file")
     .addHelpText("after", `
 
@@ -31,51 +32,24 @@ Example:
     });
 
   cmd
-    .command("list")
-    .description("List hooks for the configured API key")
-    .option("--search <value>", "search text")
-    .option("--limit <number>", "page size", "20")
-    .option("--offset <number>", "page offset", "0")
-    .action(async (options) => {
-      const client = await AgentGatewayClient.fromConfig();
-      const response = await client.get("/v1/hooks", {
-        search: options.search,
-        limit: options.limit,
-        offset: options.offset,
-      });
-      printTable((response as any).data ?? response);
-    });
-
-  cmd
-    .command("get")
-    .description("Get a hook owned by the configured API key")
-    .argument("<hook-id>", "hook UUID")
-    .action(async (hookID: string) => {
-      const client = await AgentGatewayClient.fromConfig();
-      printJSON(await client.get(`/v1/hooks/${encodeURIComponent(hookID)}`));
-    });
-
-  cmd
     .command("update")
-    .description("Update a hook owned by the configured API key")
-    .argument("<hook-id>", "hook UUID")
+    .description("Update the hook for the configured API key")
     .requiredOption("-f, --file <path>", "JSON/YAML hook payload file")
     .addHelpText("after", `
 
 Example:
-  seaagent hook update <hook-id> -f payloads/hook-update.json`)
-    .action(async (hookID: string, options: { file: string }) => {
+  seaagent hook update -f examples/hook.json`)
+    .action(async (options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
-      printJSON(await client.put(`/v1/hooks/${encodeURIComponent(hookID)}`, await readPayload(options.file)));
+      printJSON(await client.put("/v1/hooks", await readPayload(options.file)));
     });
 
   cmd
     .command("delete")
-    .description("Delete a hook owned by the configured API key")
-    .argument("<hook-id>", "hook UUID")
-    .action(async (hookID: string) => {
+    .description("Delete the hook for the configured API key")
+    .action(async () => {
       const client = await AgentGatewayClient.fromConfig();
-      printJSON(await client.delete(`/v1/hooks/${encodeURIComponent(hookID)}`));
+      printJSON(await client.delete("/v1/hooks"));
     });
 
   return cmd;

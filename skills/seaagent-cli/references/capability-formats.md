@@ -21,8 +21,8 @@ Maintenance endpoints:
 - `skill delete <id>` -> `DELETE /v1/skills/{id}`
 - `agent update <id> -f file` -> `PUT /v1/agents/{id}`
 - `agent delete <id>` -> `DELETE /v1/agents/{id}`
-- `hook update <id> -f file` -> `PUT /v1/hooks/{id}`
-- `hook delete <id>` -> `DELETE /v1/hooks/{id}`
+- `hook update -f file` -> `PUT /v1/hooks`
+- `hook delete` -> `DELETE /v1/hooks`
 
 Discovery and runtime endpoints:
 
@@ -30,7 +30,6 @@ Discovery and runtime endpoints:
 - `tool list/get/resolve` -> `GET /v1/tools`, `GET /v1/tools/{id}`, `GET /v1/tools/{id}/resolve`
 - `skill list/get` -> `GET /v1/skills`, `GET /v1/skills/{id}`
 - `agent list/get/capabilities` -> `GET /v1/agents`, `GET /v1/agents/{id}`, `GET /v1/agents/{id}/capabilities`
-- `hook list/get` -> `GET /v1/hooks`, `GET /v1/hooks/{id}`
 - `chat run/get/events/stream/cancel` -> `/v1/chat/completions`, `/v1/chats/...`
 - `sandbox create/get/events/stream/logs/files/read/archive/command/refresh/resume/delete` -> `/v1/sandbox/runs/...`
 - `game ...` -> legacy equivalents on `/v1/game/runs/...`
@@ -420,23 +419,23 @@ To mark a low-level agent as a sandbox agent, add `agent_config.runtime.sandbox`
 
 `runtime.sandbox` is a type marker. Do not use `runtime.sandbox.enabled`; sandbox behavior is selected by the presence of the object. Allowed `runtime.sandbox.sandbox_template` values are `react-game` and `react-web`.
 
-## Hook Register
+## Hook Management
 
-Hook commands use the CLI configured API key as `Authorization: Bearer <api-key>`. Payload files do not include `api_key`; the gateway stores only a hash of the header key and limits hook management to that key.
+Hook commands authenticate with the CLI configured API key as `Authorization: Bearer <api-key>`. The gateway stores its hash and uses it as the Hook management identity.
 
 Use with:
 
 ```bash
 seaagent hook register -f <payload.json>
-seaagent hook update <hook-id> -f <payload.json>
+seaagent hook update -f <payload.json>
+seaagent hook delete
 ```
 
 ```json
 {
   "name": "production-line-hook",
   "endpoint": "https://example.com/agent-hook",
-  "description": "Receives Agent Worker events for the configured API key.",
-  "metadata": {}
+  "description": "Receives multimodal charge reservation events for the configured API key."
 }
 ```
 
@@ -444,9 +443,49 @@ Rules:
 
 - `name` and `endpoint` are required.
 - `endpoint` must be an absolute `http` or `https` URL.
-- Hook calls use fixed `POST`; do not include `method`.
-- All events are sent to the hook endpoint; the hook service filters by payload `event_id`.
-- Do not put API keys or secrets in the payload.
+- Registration and update payload fields are `name`, `endpoint`, and `description`.
+- One API key owns at most one active Hook. Registration creates a Hook and returns `409 Conflict` when one is already active; after deletion, the same API key can register again.
+- Hook management requests authenticate with the configured API key in the `Authorization` header.
+- Worker callback requests use fixed `POST`.
+
+Callback request and response contracts are defined by the request's `event`. Phase one supports the following event.
+
+### Event: `multimodal.charge.reserve`
+
+The Worker sends this event synchronously immediately before submitting a multimodal model operation:
+
+```json
+{
+  "event_id": "evt_...",
+  "event": "multimodal.charge.reserve",
+  "run_id": "run_...",
+  "metadata": {},
+  "data": {
+    "operation_id": "op_...",
+    "tool_name": "generate",
+    "model": "model-name",
+    "modality": "multimodal",
+    "cost": "0.035",
+    "currency": "USD"
+  }
+}
+```
+
+Callback `metadata` is copied from the individual chat request. `event_id` and `data.operation_id` remain stable across retries of the same reservation attempt.
+
+For this event, the Hook endpoint must return an HTTP success status and a top-level JSON object. To approve the operation, return:
+
+```json
+{"approved":true}
+```
+
+`approved` must be boolean `true`. The Worker then submits the multimodal operation. To reject it, return:
+
+```json
+{"approved":false,"code":"insufficient_balance","message":"Balance is insufficient"}
+```
+
+For a rejection, `approved` must be boolean `false`; optional `code` and `message` describe the reason. The Worker stops before submitting the multimodal operation. Hook timeouts, network failures, non-success responses, invalid JSON, and invalid event responses fail closed.
 
 ## Chat Payloads
 
@@ -469,7 +508,6 @@ Rules:
 - `--no-stream` sets `stream: false`; when stored events are available, CLI enriches the JSON response with `response.message.content`.
 - `--ws` keeps streaming enabled and uses `GET /v1/chat/completions/ws`; the CLI sends the `ChatCompletionRequest` JSON as the first WebSocket message.
 - `chat stream --ws <chat-id>` uses `GET /v1/chats/{chat-id}/ws?after_seq=...` to replay an existing run over WebSocket.
-- API key from CLI config is also injected by gateway into chat metadata when present.
 - For sandbox agents, chat streams can include `chat.sandbox.creating`, `chat.sandbox.ready`, and `chat.sandbox.failed`. The `sandbox_run_id` / `game_run_id` from those events is the run id for `/v1/sandbox/runs/{runID}` APIs; `/v1/game/runs/{runID}` remains a legacy route.
 
 ## Verification
