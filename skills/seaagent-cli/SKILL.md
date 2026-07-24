@@ -173,6 +173,8 @@ seaagent agent capabilities <agent-id>
 seaagent agent delete <agent-id>
 seaagent agent memory list <agent-id> [--limit <n>] [--offset <n>]
 seaagent agent memory export <agent-id>
+seaagent agent memory candidates <agent-id> [--limit <n>] [--offset <n>]
+seaagent agent memory confirm <agent-id> <candidate-id> -f <payload.json|yaml>
 seaagent agent memory update <agent-id> <memory-id> -f <payload.json|yaml>
 seaagent agent memory delete <agent-id> <memory-id> [--reason <value>]
 seaagent agent memory facts list <agent-id> [--status <value>] [--limit <n>] [--offset <n>]
@@ -364,6 +366,8 @@ Long media-generation requests can exceed the front proxy timeout and return `50
 - `agent capabilities` -> `GET /v1/agents/{agent-id}/capabilities`
 - `agent delete` -> `DELETE /v1/agents/{agent-id}`
 - `agent memory list/export` -> `GET /v1/agents/{agent-id}/memory/`, `GET /v1/agents/{agent-id}/memory/export`
+- `agent memory candidates` -> `GET /v1/agents/{agent-id}/memory/candidates`
+- `agent memory confirm` -> `POST /v1/agents/{agent-id}/memory/candidates/{candidate-id}/confirm`
 - `agent memory update/delete` -> `PUT/DELETE /v1/agents/{agent-id}/memory/{memory-id}`
 - `agent memory facts list/create` -> `GET/POST /v1/agents/{agent-id}/memory/facts`
 - `agent memory facts update/delete` -> `PUT/DELETE /v1/agents/{agent-id}/memory/facts/{fact-id}`

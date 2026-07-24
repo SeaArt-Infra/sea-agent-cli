@@ -205,6 +205,46 @@ function agentMemoryCommand(): Command {
     });
 
   memory
+    .command("candidates")
+    .description("List cross-session preference candidates awaiting user confirmation")
+    .argument("<agent-id>", "agent UUID")
+    .option("--limit <number>", "page size", "20")
+    .option("--offset <number>", "page offset", "0")
+    .action(async (agentID: string, options) => {
+      const client = await AgentGatewayClient.fromConfig();
+      const response = await client.get(`/v1/agents/${encodeURIComponent(agentID)}/memory/candidates`, {
+        limit: options.limit,
+        offset: options.offset,
+      });
+      printTable((response as any).data?.items ?? (response as any).items ?? response);
+    });
+
+  memory
+    .command("confirm")
+    .description("Confirm a preference candidate as a long-term fact")
+    .argument("<agent-id>", "agent UUID")
+    .argument("<candidate-id>", "candidate ID")
+    .requiredOption("-f, --file <path>", "JSON/YAML body containing fact_key and optional fact_value")
+    .action(async (agentID: string, candidateID: string, options: { file: string }) => {
+      const client = await AgentGatewayClient.fromConfig();
+      const payload = await readPayload(options.file);
+      await confirmRegistryMutation({
+        action: "register",
+        endpoint: client.getEndpoint(),
+        payload,
+        payloadPath: options.file,
+        resource: "memory candidate",
+        resourceID: candidateID,
+      });
+      printJSON(
+        await client.post(
+          `/v1/agents/${encodeURIComponent(agentID)}/memory/candidates/${encodeURIComponent(candidateID)}/confirm`,
+          payload,
+        ),
+      );
+    });
+
+  memory
     .command("update")
     .description("Correct one medium-term memory item")
     .argument("<agent-id>", "agent UUID")
