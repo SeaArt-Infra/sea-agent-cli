@@ -13,7 +13,7 @@
 | System and catalog | `seaagent system ...`, `seaagent catalog ...` | Check gateway health, metrics, and reusable capabilities |
 | Tools | `seaagent tool ...` | Register, list, inspect, resolve, update, and delete executable tools |
 | Skills | `seaagent skill ...` | Register, list, inspect, update, and delete agent-facing instructions plus tool bindings |
-| Agents | `seaagent agent ...` | Register, list, inspect, update, delete, and verify runnable agents |
+| Agents | `seaagent agent ...` | Register, inspect, verify, and manage agent memory |
 | Chat | `seaagent chat ...` | Run registered or inline agents, stream responses, replay events, and cancel runs |
 | Hooks | `seaagent hook ...` | Manage the multimodal charge reservation hook for the configured API key |
 | Sandbox runs | `seaagent sandbox ...` | Create, inspect, stream, and operate remote sandbox workspaces |
@@ -163,6 +163,20 @@ Agent notes:
 - `category` should be `fabric` or `seaactor`.
 - Do not send `agent_key` for new registrations; the gateway returns an immutable UUID.
 - Use `agent capabilities <agent-id>` after agent or skill changes to verify resolved bindings.
+
+Memory notes:
+
+- `agent memory list/export` reads medium- and long-term memory for the configured `X-User-ID`.
+- `agent memory update/delete` corrects or forgets one medium-term item.
+- `agent memory facts list/create/update/delete` manages versioned long-term facts.
+- The gateway derives `user_id` and `agent_record_id`; do not put either field in payload files.
+
+```bash
+seaagent agent memory list <agent-id>
+seaagent agent memory export <agent-id>
+seaagent agent memory facts list <agent-id> --status active
+seaagent agent memory facts create <agent-id> -f fact.json
+```
 
 Hook notes:
 

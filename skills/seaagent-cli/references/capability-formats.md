@@ -21,6 +21,8 @@ Maintenance endpoints:
 - `skill delete <id>` -> `DELETE /v1/skills/{id}`
 - `agent update <id> -f file` -> `PUT /v1/agents/{id}`
 - `agent delete <id>` -> `DELETE /v1/agents/{id}`
+- `agent memory update/delete <agent-id> <memory-id>` -> `PUT/DELETE /v1/agents/{agent-id}/memory/{memory-id}`
+- `agent memory facts create/update/delete ...` -> `/v1/agents/{agent-id}/memory/facts/...`
 - `hook update -f file` -> `PUT /v1/hooks`
 - `hook delete` -> `DELETE /v1/hooks`
 
@@ -30,6 +32,7 @@ Discovery and runtime endpoints:
 - `tool list/get/resolve` -> `GET /v1/tools`, `GET /v1/tools/{id}`, `GET /v1/tools/{id}/resolve`
 - `skill list/get` -> `GET /v1/skills`, `GET /v1/skills/{id}`
 - `agent list/get/capabilities` -> `GET /v1/agents`, `GET /v1/agents/{id}`, `GET /v1/agents/{id}/capabilities`
+- `agent memory list/export/facts list` -> `GET /v1/agents/{id}/memory/...`
 - `chat run/get/events/stream/cancel` -> `/v1/chat/completions`, `/v1/chats/...`
 - `sandbox create/get/events/stream/logs/files/read/archive/command/refresh/resume/delete` -> `/v1/sandbox/runs/...`
 - `game ...` -> legacy equivalents on `/v1/game/runs/...`

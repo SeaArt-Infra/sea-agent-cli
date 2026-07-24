@@ -30,6 +30,8 @@ Examples:
   seaagent agent get <agent-id>
   seaagent agent delete <agent-id>
   seaagent agent capabilities <agent-id>
+  seaagent agent memory list <agent-id>
+  seaagent agent memory facts list <agent-id>
   seaagent chat run <agent-id> "hello"
 `);
     cmd
@@ -162,5 +164,141 @@ Example:
         const client = await AgentGatewayClient.fromConfig();
         printJSON(await client.get(`/v1/agents/${encodeURIComponent(agentID)}/capabilities`));
     });
+    cmd.addCommand(agentMemoryCommand());
     return cmd;
+}
+function agentMemoryCommand() {
+    const memory = new Command("memory").description("Manage an agent's medium- and long-term memory");
+    memory
+        .command("list")
+        .description("List medium-term memory")
+        .argument("<agent-id>", "agent UUID")
+        .option("--limit <number>", "page size", "20")
+        .option("--offset <number>", "page offset", "0")
+        .action(async (agentID, options) => {
+        const client = await AgentGatewayClient.fromConfig();
+        const response = await client.get(`/v1/agents/${encodeURIComponent(agentID)}/memory/`, {
+            limit: options.limit,
+            offset: options.offset,
+        });
+        printTable(response.data?.items ?? response.items ?? response);
+    });
+    memory
+        .command("export")
+        .description("Export medium- and long-term memory")
+        .argument("<agent-id>", "agent UUID")
+        .action(async (agentID) => {
+        const client = await AgentGatewayClient.fromConfig();
+        printJSON(await client.get(`/v1/agents/${encodeURIComponent(agentID)}/memory/export`));
+    });
+    memory
+        .command("update")
+        .description("Correct one medium-term memory item")
+        .argument("<agent-id>", "agent UUID")
+        .argument("<memory-id>", "memory ID")
+        .requiredOption("-f, --file <path>", "JSON/YAML body containing content")
+        .action(async (agentID, memoryID, options) => {
+        const client = await AgentGatewayClient.fromConfig();
+        const payload = await readPayload(options.file);
+        await confirmRegistryMutation({
+            action: "update",
+            endpoint: client.getEndpoint(),
+            payload,
+            payloadPath: options.file,
+            resource: "memory",
+            resourceID: memoryID,
+        });
+        printJSON(await client.put(`/v1/agents/${encodeURIComponent(agentID)}/memory/${encodeURIComponent(memoryID)}`, payload));
+    });
+    memory
+        .command("delete")
+        .description("Forget one medium-term memory item")
+        .argument("<agent-id>", "agent UUID")
+        .argument("<memory-id>", "memory ID")
+        .option("--reason <value>", "deletion reason", "user_request")
+        .action(async (agentID, memoryID, options) => {
+        const client = await AgentGatewayClient.fromConfig();
+        const payload = { reason: options.reason };
+        await confirmRegistryMutation({
+            action: "delete",
+            endpoint: client.getEndpoint(),
+            payload,
+            resource: "memory",
+            resourceID: memoryID,
+        });
+        printJSON(await client.deleteWithBody(`/v1/agents/${encodeURIComponent(agentID)}/memory/${encodeURIComponent(memoryID)}`, payload));
+    });
+    const facts = new Command("facts").description("Manage confirmed long-term facts");
+    facts
+        .command("list")
+        .description("List long-term facts")
+        .argument("<agent-id>", "agent UUID")
+        .option("--status <value>", "fact status", "active")
+        .option("--limit <number>", "page size", "50")
+        .option("--offset <number>", "page offset", "0")
+        .action(async (agentID, options) => {
+        const client = await AgentGatewayClient.fromConfig();
+        const response = await client.get(`/v1/agents/${encodeURIComponent(agentID)}/memory/facts`, {
+            status: options.status,
+            limit: options.limit,
+            offset: options.offset,
+        });
+        printTable(response.data?.items ?? response.items ?? response);
+    });
+    facts
+        .command("create")
+        .description("Create or confirm a long-term fact")
+        .argument("<agent-id>", "agent UUID")
+        .requiredOption("-f, --file <path>", "JSON/YAML fact body")
+        .action(async (agentID, options) => {
+        const client = await AgentGatewayClient.fromConfig();
+        const payload = await readPayload(options.file);
+        await confirmRegistryMutation({
+            action: "register",
+            endpoint: client.getEndpoint(),
+            payload,
+            payloadPath: options.file,
+            resource: "fact",
+        });
+        printJSON(await client.post(`/v1/agents/${encodeURIComponent(agentID)}/memory/facts`, payload));
+    });
+    facts
+        .command("update")
+        .description("Correct a long-term fact by creating a new version")
+        .argument("<agent-id>", "agent UUID")
+        .argument("<fact-id>", "fact ID")
+        .requiredOption("-f, --file <path>", "JSON/YAML correction body")
+        .action(async (agentID, factID, options) => {
+        const client = await AgentGatewayClient.fromConfig();
+        const payload = await readPayload(options.file);
+        await confirmRegistryMutation({
+            action: "update",
+            endpoint: client.getEndpoint(),
+            payload,
+            payloadPath: options.file,
+            resource: "fact",
+            resourceID: factID,
+        });
+        printJSON(await client.put(`/v1/agents/${encodeURIComponent(agentID)}/memory/facts/${encodeURIComponent(factID)}`, payload));
+    });
+    facts
+        .command("delete")
+        .description("Forget a long-term fact")
+        .argument("<agent-id>", "agent UUID")
+        .argument("<fact-id>", "fact ID")
+        .option("--reason <value>", "deletion reason", "user_request")
+        .action(async (agentID, factID, options) => {
+        const client = await AgentGatewayClient.fromConfig();
+        const payload = { reason: options.reason };
+        await confirmRegistryMutation({
+            action: "delete",
+            endpoint: client.getEndpoint(),
+            payload,
+            resource: "fact",
+            resourceID: factID,
+        });
+        printJSON(await client.deleteWithBody(`/v1/agents/${encodeURIComponent(agentID)}/memory/facts/${encodeURIComponent(factID)}`, payload));
+    });
+    memory.addCommand(facts);
+    return memory;
 }

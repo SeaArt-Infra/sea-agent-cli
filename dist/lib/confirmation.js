@@ -10,7 +10,7 @@ export async function confirmRegistryMutation(options) {
         return;
     }
     if (isAgentManagedRuntime()) {
-        throw new Error("registry mutations from agent-managed terminals require desktop confirmation; run the command in your own terminal");
+        throw new Error("mutations from agent-managed terminals require desktop confirmation; run the command in your own terminal");
     }
     if (!process.stdin.isTTY) {
         throw new Error("operation requires explicit interactive confirmation");
@@ -31,7 +31,7 @@ export async function confirmRegistryMutation(options) {
 }
 async function confirmWithDesktopDialog(options, summary) {
     const title = `Confirm seaagent ${options.resource} ${options.action}`;
-    const message = `${summary}\n\nApprove this registry mutation?`;
+    const message = `${summary}\n\nApprove this mutation?`;
     try {
         await execFileAsync("osascript", [
             "-e",

@@ -5,7 +5,7 @@ import { createInterface } from "node:readline/promises";
 const execFileAsync = promisify(execFile);
 
 type RegistryMutationAction = "register" | "update" | "delete";
-type RegistryMutationResource = "agent" | "skill" | "tool";
+type RegistryMutationResource = "agent" | "fact" | "memory" | "skill" | "tool";
 
 export interface RegistryMutationConfirmation {
   action: RegistryMutationAction;
@@ -26,7 +26,7 @@ export async function confirmRegistryMutation(options: RegistryMutationConfirmat
   }
 
   if (isAgentManagedRuntime()) {
-    throw new Error("registry mutations from agent-managed terminals require desktop confirmation; run the command in your own terminal");
+    throw new Error("mutations from agent-managed terminals require desktop confirmation; run the command in your own terminal");
   }
 
   if (!process.stdin.isTTY) {
@@ -49,7 +49,7 @@ export async function confirmRegistryMutation(options: RegistryMutationConfirmat
 
 async function confirmWithDesktopDialog(options: RegistryMutationConfirmation, summary: string): Promise<void> {
   const title = `Confirm seaagent ${options.resource} ${options.action}`;
-  const message = `${summary}\n\nApprove this registry mutation?`;
+  const message = `${summary}\n\nApprove this mutation?`;
   try {
     await execFileAsync("osascript", [
       "-e",

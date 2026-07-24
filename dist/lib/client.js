@@ -107,6 +107,9 @@ export class AgentGatewayClient {
     async delete(path, query) {
         return this.requestJSON("DELETE", this.buildURL(path, query));
     }
+    async deleteWithBody(path, body) {
+        return this.requestJSON("DELETE", this.buildURL(path), body);
+    }
     buildURL(path, query) {
         const base = new URL(this.endpoint);
         const basePath = base.pathname.endsWith("/") ? base.pathname : `${base.pathname}/`;
