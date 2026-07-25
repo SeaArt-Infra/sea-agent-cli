@@ -49,7 +49,8 @@ Examples:
 Payload notes:
   - category is required by current gateway deployments: fabric or seaactor.
   - Do not send agent_key for new registrations; gateway returns an immutable UUID.
-  - Reuse existing skills by putting their immutable UUIDs in skills.
+  - skills is the complete Skill UUID array. Add always-needed Skill UUIDs to pre_skills.
+  - pre_skills must be a subset of skills. Gateway preloads those instructions into the Agent prompt and avoids their Worker SKILL.md reads.
   - Runtime settings belong in config/agent_config.
 
 Minimal payload:
@@ -58,7 +59,8 @@ Minimal payload:
     "category": "fabric",
     "model": {"default": "claude-sonnet-4-6-seawork"},
     "system_prompt": "You are a concise assistant.",
-    "skills": ["<skill-uuid>"],
+    "skills": ["<always-needed-skill-uuid>", "<on-demand-skill-uuid>"],
+    "pre_skills": ["<always-needed-skill-uuid>"],
     "config": {"temperature": 0.2},
     "enabled": true
   }`)

@@ -1,7 +1,7 @@
 ---
 name: seaagent-cli
 description: "Use this skill when working with the local seaagent CLI for SeaArt agent-gateway: configuring endpoints and API keys, registering/updating/deleting tools, skills, and agents, listing catalog entries, resolving runtime configs, and running or inspecting chats."
-version: "2026.07.14"
+version: "2026.07.25"
 ---
 
 # Seaagent CLI

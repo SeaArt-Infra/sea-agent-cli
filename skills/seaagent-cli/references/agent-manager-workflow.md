@@ -82,7 +82,8 @@ For new manager-style Agents, the SeaInfra manager defaults are:
   },
   "system_prompt": "Role, workflow, output contract, and failure behavior.",
   "agent_config": {},
-  "skills": ["<skill-uuid>"],
+  "skills": ["<always-needed-skill-uuid>", "<on-demand-skill-uuid>"],
+  "pre_skills": ["<always-needed-skill-uuid>"],
   "version": "v1"
 }
 ```
@@ -96,7 +97,8 @@ Rules:
 - Preserve an existing Agent name during update unless the user asks to rename it.
 - For new names, use a stable lowercase slug and do not append UUIDs, timestamps, version text, or random suffixes.
 - `category` must be `fabric` or `seaactor`.
-- `skills` contains only Skill UUIDs/refs, never Tool refs.
+- `skills` contains only Skill UUIDs, never Tool refs. `pre_skills` is an optional duplicate-free subset of `skills`.
+- Put a short instruction needed on every run in both `skills` and `pre_skills`: gateway preloads it into the resolved system prompt and removes its Worker `SKILL.md` read. Keep long or optional Skills only in `skills` so Worker loads them progressively.
 - Omit `agent_config` for new Agents unless runtime settings are needed; preserve existing `agent_config` during updates unless the user changes it.
 - `metadata` is stored as `{}` by the gateway; do not put display metadata there.
 - Do not send Skill-only fields such as `provider`, `description`, `instruction`, `required_tools`, `optional_tools`, `public`, or `enabled` inside the Agent object.

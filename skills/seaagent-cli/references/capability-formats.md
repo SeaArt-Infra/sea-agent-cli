@@ -326,7 +326,11 @@ seaagent agent register -f <payload.json>
     "reasoning_effort": "medium"
   },
   "system_prompt": "Base system prompt.",
-  "skills": ["11111111-1111-4111-8111-111111111111"],
+  "skills": [
+    "11111111-1111-4111-8111-111111111111",
+    "22222222-2222-4222-8222-222222222222"
+  ],
+  "pre_skills": ["11111111-1111-4111-8111-111111111111"],
   "config": {
     "temperature": 0.2,
     "max_turns": 20,
@@ -345,7 +349,8 @@ Rules:
 - Do not send removed `agent_key` fields for new concise agent registrations. Reject or normalize names like `react_game_generator_agent_013919`; use canonical `name: "react_game_generator_agent"` plus an intentional `owner_id`.
 - `model` and `config` default to `{}`. Agent `metadata` is ignored and stored as `{}`; use `config` for runtime settings.
 - Gateway normalizes `model.default` and `model.allowed` by removing provider or routing prefixes before storage. For example, `vertex_ai/gemini-3-flash-preview`, `openai/gpt-4o`, and `gpt/gpt-4.1-mini` are stored as `gemini-3-flash-preview`, `gpt-4o`, and `gpt-4.1-mini`.
-- `skills` must contain non-empty Skill UUIDs and every referenced skill must resolve to active Skill current state visible to the agent owner. Private Skill refs owned by another production line are rejected.
+- `skills` is the complete array of bound Skill UUIDs. Every referenced Skill must resolve to active current state visible to the agent owner; private Skill refs owned by another production line are rejected.
+- `pre_skills` is an optional duplicate-free subset of `skills`. Gateway resolves a preloaded Skill into the Agent system prompt and avoids the initial Worker `read_file` call for its `SKILL.md`; use it only for short instructions required on every run. Skills not in `pre_skills` keep progressive Worker loading. Both groups resolve the Skill's required and optional Tools.
 - Agent register creates an active agent by default. `enabled` is kept only for payload compatibility.
 - To mark a registered agent as a sandbox agent, add `config.runtime.sandbox`. The presence of `sandbox` is the type marker; do not add `enabled`.
 - For sandbox agents, set `config.runtime.sandbox.sandbox_template` to `react-game` or `react-web`.
@@ -388,7 +393,8 @@ Use with `agent register` to create if the payload includes low-level trigger fi
     "max_turns": 20,
     "timeout": 600
   },
-  "skills": ["11111111-1111-4111-8111-111111111111"]
+  "skills": ["11111111-1111-4111-8111-111111111111"],
+  "pre_skills": []
 }
 ```
 
