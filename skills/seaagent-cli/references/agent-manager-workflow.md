@@ -98,7 +98,7 @@ Rules:
 - For new names, use a stable lowercase slug and do not append UUIDs, timestamps, version text, or random suffixes.
 - `category` must be `fabric` or `seaactor`.
 - `skills` contains only Skill UUIDs, never Tool refs. `pre_skills` is an optional duplicate-free subset of `skills`.
-- Put a short instruction needed on every run in both `skills` and `pre_skills`: gateway preloads it into the resolved system prompt and removes its Worker `SKILL.md` read. Keep long or optional Skills only in `skills` so Worker loads them progressively.
+- Add a Skill to both `skills` and `pre_skills` only when it is expected in most runs and the model needs its full instruction before deciding what to do. Gateway preloads it into the resolved system prompt and removes its Worker `SKILL.md` read, but adds system-prompt tokens on every run. Keep conditional, occasional, long, or low-confidence Skills only in `skills` so Worker loads them progressively; do not preload a Skill merely because it is short.
 - Omit `agent_config` for new Agents unless runtime settings are needed; preserve existing `agent_config` during updates unless the user changes it.
 - `metadata` is stored as `{}` by the gateway; do not put display metadata there.
 - Do not send Skill-only fields such as `provider`, `description`, `instruction`, `required_tools`, `optional_tools`, `public`, or `enabled` inside the Agent object.

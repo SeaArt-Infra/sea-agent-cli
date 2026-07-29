@@ -30,8 +30,9 @@ Examples:
   seaagent agent get <agent-id>
   seaagent agent delete <agent-id>
   seaagent agent capabilities <agent-id>
-  seaagent agent memory list <agent-id>
-  seaagent agent memory facts list <agent-id>
+  seaagent agent memory list <agent-id> --end-user-id <user-id>
+  seaagent agent memory account delete <agent-id> --end-user-id <user-id>
+  seaagent agent memory facts list <agent-id> --end-user-id <user-id>
   seaagent chat run <agent-id> "hello"
 `);
     cmd
@@ -47,8 +48,8 @@ Examples:
 Payload notes:
   - category is required by current gateway deployments: fabric or seaactor.
   - Do not send agent_key for new registrations; gateway returns an immutable UUID.
-  - skills is the complete Skill UUID array. Add always-needed Skill UUIDs to pre_skills.
-  - pre_skills must be a subset of skills. Gateway preloads those instructions into the Agent prompt and avoids their Worker SKILL.md reads.
+  - skills is the complete Skill UUID array. Add only high-probability, decision-critical Skill UUIDs to pre_skills.
+  - pre_skills must be a subset of skills. Gateway preloads those instructions into the Agent prompt and avoids their Worker SKILL.md reads, but adds prompt tokens on every run. Keep conditional, occasional, long, or uncertain Skills out of pre_skills.
   - Runtime settings belong in config/agent_config.
 
 Minimal payload:
@@ -170,52 +171,56 @@ Example:
     return cmd;
 }
 function agentMemoryCommand() {
-    const memory = new Command("memory").description("Manage an agent's medium- and long-term memory");
-    memory
+    const memory = new Command("memory").description("Manage one terminal user's medium- and long-term memory");
+    addMemoryEndUserOption(memory
         .command("list")
         .description("List medium-term memory")
         .argument("<agent-id>", "agent UUID")
         .option("--limit <number>", "page size", "20")
-        .option("--offset <number>", "page offset", "0")
+        .option("--offset <number>", "page offset", "0"))
         .action(async (agentID, options) => {
         const client = await AgentGatewayClient.fromConfig();
         const response = await client.get(`/v1/agents/${encodeURIComponent(agentID)}/memory/`, {
+            end_user_id: options.endUserId,
             limit: options.limit,
             offset: options.offset,
         });
         printTable(response.data?.items ?? response.items ?? response);
     });
-    memory
+    addMemoryEndUserOption(memory
         .command("export")
         .description("Export medium- and long-term memory")
-        .argument("<agent-id>", "agent UUID")
-        .action(async (agentID) => {
+        .argument("<agent-id>", "agent UUID"))
+        .action(async (agentID, options) => {
         const client = await AgentGatewayClient.fromConfig();
-        printJSON(await client.get(`/v1/agents/${encodeURIComponent(agentID)}/memory/export`));
+        printJSON(await client.get(`/v1/agents/${encodeURIComponent(agentID)}/memory/export`, {
+            end_user_id: options.endUserId,
+        }));
     });
-    memory
+    addMemoryEndUserOption(memory
         .command("candidates")
         .description("List cross-session preference candidates awaiting user confirmation")
         .argument("<agent-id>", "agent UUID")
         .option("--limit <number>", "page size", "20")
-        .option("--offset <number>", "page offset", "0")
+        .option("--offset <number>", "page offset", "0"))
         .action(async (agentID, options) => {
         const client = await AgentGatewayClient.fromConfig();
         const response = await client.get(`/v1/agents/${encodeURIComponent(agentID)}/memory/candidates`, {
+            end_user_id: options.endUserId,
             limit: options.limit,
             offset: options.offset,
         });
         printTable(response.data?.items ?? response.items ?? response);
     });
-    memory
+    addMemoryEndUserOption(memory
         .command("confirm")
         .description("Confirm a preference candidate as a long-term fact")
         .argument("<agent-id>", "agent UUID")
         .argument("<candidate-id>", "candidate ID")
-        .requiredOption("-f, --file <path>", "JSON/YAML body containing fact_key and optional fact_value")
+        .requiredOption("-f, --file <path>", "JSON/YAML body containing fact_key and optional fact_value"))
         .action(async (agentID, candidateID, options) => {
         const client = await AgentGatewayClient.fromConfig();
-        const payload = await readPayload(options.file);
+        const payload = withMemoryEndUser(await readPayload(options.file), options.endUserId);
         await confirmRegistryMutation({
             action: "register",
             endpoint: client.getEndpoint(),
@@ -226,15 +231,15 @@ function agentMemoryCommand() {
         });
         printJSON(await client.post(`/v1/agents/${encodeURIComponent(agentID)}/memory/candidates/${encodeURIComponent(candidateID)}/confirm`, payload));
     });
-    memory
+    addMemoryEndUserOption(memory
         .command("update")
         .description("Correct one medium-term memory item")
         .argument("<agent-id>", "agent UUID")
         .argument("<memory-id>", "memory ID")
-        .requiredOption("-f, --file <path>", "JSON/YAML body containing content")
+        .requiredOption("-f, --file <path>", "JSON/YAML body containing content"))
         .action(async (agentID, memoryID, options) => {
         const client = await AgentGatewayClient.fromConfig();
-        const payload = await readPayload(options.file);
+        const payload = withMemoryEndUser(await readPayload(options.file), options.endUserId);
         await confirmRegistryMutation({
             action: "update",
             endpoint: client.getEndpoint(),
@@ -245,15 +250,15 @@ function agentMemoryCommand() {
         });
         printJSON(await client.put(`/v1/agents/${encodeURIComponent(agentID)}/memory/${encodeURIComponent(memoryID)}`, payload));
     });
-    memory
+    addMemoryEndUserOption(memory
         .command("delete")
         .description("Forget one medium-term memory item")
         .argument("<agent-id>", "agent UUID")
         .argument("<memory-id>", "memory ID")
-        .option("--reason <value>", "deletion reason", "user_request")
+        .option("--reason <value>", "deletion reason", "user_request"))
         .action(async (agentID, memoryID, options) => {
         const client = await AgentGatewayClient.fromConfig();
-        const payload = { reason: options.reason };
+        const payload = { reason: options.reason, end_user_id: options.endUserId };
         await confirmRegistryMutation({
             action: "delete",
             endpoint: client.getEndpoint(),
@@ -263,31 +268,51 @@ function agentMemoryCommand() {
         });
         printJSON(await client.deleteWithBody(`/v1/agents/${encodeURIComponent(agentID)}/memory/${encodeURIComponent(memoryID)}`, payload));
     });
+    const account = new Command("account").description("Delete all persisted memory for one terminal user");
+    addMemoryEndUserOption(account
+        .command("delete")
+        .description("Permanently delete one terminal user's worker, medium-, and long-term memory")
+        .argument("<agent-id>", "agent UUID")
+        .option("--reason <value>", "deletion reason", "user_request"))
+        .action(async (agentID, options) => {
+        const client = await AgentGatewayClient.fromConfig();
+        const payload = { reason: options.reason, end_user_id: options.endUserId };
+        await confirmRegistryMutation({
+            action: "delete",
+            endpoint: client.getEndpoint(),
+            payload,
+            resource: "memory account",
+            resourceID: `${agentID}:${options.endUserId}`,
+        });
+        printJSON(await client.deleteWithBody(`/v1/agents/${encodeURIComponent(agentID)}/memory/account`, payload));
+    });
+    memory.addCommand(account);
     const facts = new Command("facts").description("Manage confirmed long-term facts");
-    facts
+    addMemoryEndUserOption(facts
         .command("list")
         .description("List long-term facts")
         .argument("<agent-id>", "agent UUID")
         .option("--status <value>", "fact status", "active")
         .option("--limit <number>", "page size", "50")
-        .option("--offset <number>", "page offset", "0")
+        .option("--offset <number>", "page offset", "0"))
         .action(async (agentID, options) => {
         const client = await AgentGatewayClient.fromConfig();
         const response = await client.get(`/v1/agents/${encodeURIComponent(agentID)}/memory/facts`, {
+            end_user_id: options.endUserId,
             status: options.status,
             limit: options.limit,
             offset: options.offset,
         });
         printTable(response.data?.items ?? response.items ?? response);
     });
-    facts
+    addMemoryEndUserOption(facts
         .command("create")
         .description("Create or confirm a long-term fact")
         .argument("<agent-id>", "agent UUID")
-        .requiredOption("-f, --file <path>", "JSON/YAML fact body")
+        .requiredOption("-f, --file <path>", "JSON/YAML fact body"))
         .action(async (agentID, options) => {
         const client = await AgentGatewayClient.fromConfig();
-        const payload = await readPayload(options.file);
+        const payload = withMemoryEndUser(await readPayload(options.file), options.endUserId);
         await confirmRegistryMutation({
             action: "register",
             endpoint: client.getEndpoint(),
@@ -297,15 +322,15 @@ function agentMemoryCommand() {
         });
         printJSON(await client.post(`/v1/agents/${encodeURIComponent(agentID)}/memory/facts`, payload));
     });
-    facts
+    addMemoryEndUserOption(facts
         .command("update")
         .description("Correct a long-term fact by creating a new version")
         .argument("<agent-id>", "agent UUID")
         .argument("<fact-id>", "fact ID")
-        .requiredOption("-f, --file <path>", "JSON/YAML correction body")
+        .requiredOption("-f, --file <path>", "JSON/YAML correction body"))
         .action(async (agentID, factID, options) => {
         const client = await AgentGatewayClient.fromConfig();
-        const payload = await readPayload(options.file);
+        const payload = withMemoryEndUser(await readPayload(options.file), options.endUserId);
         await confirmRegistryMutation({
             action: "update",
             endpoint: client.getEndpoint(),
@@ -316,15 +341,15 @@ function agentMemoryCommand() {
         });
         printJSON(await client.put(`/v1/agents/${encodeURIComponent(agentID)}/memory/facts/${encodeURIComponent(factID)}`, payload));
     });
-    facts
+    addMemoryEndUserOption(facts
         .command("delete")
         .description("Forget a long-term fact")
         .argument("<agent-id>", "agent UUID")
         .argument("<fact-id>", "fact ID")
-        .option("--reason <value>", "deletion reason", "user_request")
+        .option("--reason <value>", "deletion reason", "user_request"))
         .action(async (agentID, factID, options) => {
         const client = await AgentGatewayClient.fromConfig();
-        const payload = { reason: options.reason };
+        const payload = { reason: options.reason, end_user_id: options.endUserId };
         await confirmRegistryMutation({
             action: "delete",
             endpoint: client.getEndpoint(),
@@ -336,4 +361,13 @@ function agentMemoryCommand() {
     });
     memory.addCommand(facts);
     return memory;
+}
+function addMemoryEndUserOption(command) {
+    return command.requiredOption("--end-user-id <id>", "terminal user ID within the configured production line");
+}
+function withMemoryEndUser(payload, endUserId) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        throw new Error("memory payload must be a JSON/YAML object");
+    }
+    return { ...payload, end_user_id: endUserId };
 }

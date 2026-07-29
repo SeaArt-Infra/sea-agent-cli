@@ -5,7 +5,7 @@ import { createInterface } from "node:readline/promises";
 const execFileAsync = promisify(execFile);
 
 type RegistryMutationAction = "register" | "update" | "delete";
-type RegistryMutationResource = "agent" | "fact" | "memory" | "memory candidate" | "skill" | "tool";
+type RegistryMutationResource = "agent" | "fact" | "memory" | "memory account" | "memory candidate" | "skill" | "tool";
 
 export interface RegistryMutationConfirmation {
   action: RegistryMutationAction;

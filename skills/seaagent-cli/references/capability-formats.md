@@ -22,6 +22,7 @@ Maintenance endpoints:
 - `agent update <id> -f file` -> `PUT /v1/agents/{id}`
 - `agent delete <id>` -> `DELETE /v1/agents/{id}`
 - `agent memory update/delete <agent-id> <memory-id>` -> `PUT/DELETE /v1/agents/{agent-id}/memory/{memory-id}`
+- `agent memory account delete <agent-id> --end-user-id <user-id>` -> `DELETE /v1/agents/{agent-id}/memory/account`
 - `agent memory confirm <agent-id> <candidate-id> -f file` -> `POST /v1/agents/{agent-id}/memory/candidates/{candidate-id}/confirm`
 - `agent memory facts create/update/delete ...` -> `/v1/agents/{agent-id}/memory/facts/...`
 - `hook update -f file` -> `PUT /v1/hooks`
@@ -34,6 +35,8 @@ Discovery and runtime endpoints:
 - `skill list/get` -> `GET /v1/skills`, `GET /v1/skills/{id}`
 - `agent list/get/capabilities` -> `GET /v1/agents`, `GET /v1/agents/{id}`, `GET /v1/agents/{id}/capabilities`
 - `agent memory list/export/candidates/facts list` -> `GET /v1/agents/{id}/memory/...`
+- Every memory command requires `--end-user-id`; the configured `X-User-ID` is the trusted production line and the gateway derives `tenant_id` plus `agent_record_id`.
+- Account deletion cascades across semantic memory and worker session storage; the gateway rejects it until the worker purge endpoint is configured, so a partial delete is never reported as complete.
 - `chat run/get/events/stream/cancel` -> `/v1/chat/completions`, `/v1/chats/...`
 - `sandbox create/get/events/stream/logs/files/read/archive/command/refresh/resume/delete` -> `/v1/sandbox/runs/...`
 - `game ...` -> legacy equivalents on `/v1/game/runs/...`
@@ -350,7 +353,7 @@ Rules:
 - `model` and `config` default to `{}`. Agent `metadata` is ignored and stored as `{}`; use `config` for runtime settings.
 - Gateway normalizes `model.default` and `model.allowed` by removing provider or routing prefixes before storage. For example, `vertex_ai/gemini-3-flash-preview`, `openai/gpt-4o`, and `gpt/gpt-4.1-mini` are stored as `gemini-3-flash-preview`, `gpt-4o`, and `gpt-4.1-mini`.
 - `skills` is the complete array of bound Skill UUIDs. Every referenced Skill must resolve to active current state visible to the agent owner; private Skill refs owned by another production line are rejected.
-- `pre_skills` is an optional duplicate-free subset of `skills`. Gateway resolves a preloaded Skill into the Agent system prompt and avoids the initial Worker `read_file` call for its `SKILL.md`; use it only for short instructions required on every run. Skills not in `pre_skills` keep progressive Worker loading. Both groups resolve the Skill's required and optional Tools.
+- `pre_skills` is an optional duplicate-free subset of `skills`. Use it only when a Skill is expected in most runs and the model needs its full instruction before deciding what to do. Gateway resolves it into the Agent system prompt and avoids the initial Worker `read_file` call for its `SKILL.md`, but adds system-prompt tokens on every run. Keep conditional, occasional, long, or low-confidence Skills only in `skills` for progressive Worker loading; do not preload a Skill merely because it is short. Both groups resolve the Skill's required and optional Tools.
 - Agent register creates an active agent by default. `enabled` is kept only for payload compatibility.
 - To mark a registered agent as a sandbox agent, add `config.runtime.sandbox`. The presence of `sandbox` is the type marker; do not add `enabled`.
 - For sandbox agents, set `config.runtime.sandbox.sandbox_template` to `react-game` or `react-web`.
