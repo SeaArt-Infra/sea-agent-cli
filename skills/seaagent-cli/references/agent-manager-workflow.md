@@ -100,6 +100,7 @@ Rules:
 - `skills` contains only Skill UUIDs, never Tool refs. `pre_skills` is an optional duplicate-free subset of `skills`.
 - Add a Skill to both `skills` and `pre_skills` only when it is expected in most runs and the model needs its full instruction before deciding what to do. Gateway preloads it into the resolved system prompt and removes its Worker `SKILL.md` read, but adds system-prompt tokens on every run. Keep conditional, occasional, long, or low-confidence Skills only in `skills` so Worker loads them progressively; do not preload a Skill merely because it is short.
 - Omit `agent_config` for new Agents unless runtime settings are needed; preserve existing `agent_config` during updates unless the user changes it.
+- Medium-term memory defaults to `recall=true` and `learn=true` for a complete persistent session. Add `config.memory_policy` (concise payload) or `agent_config.memory_policy` (low-level payload) only to restrict an Agent; see [Capability Formats](capability-formats.md#memory-policy) for field semantics and runtime guards.
 - `metadata` is stored as `{}` by the gateway; do not put display metadata there.
 - Do not send Skill-only fields such as `provider`, `description`, `instruction`, `required_tools`, `optional_tools`, `public`, or `enabled` inside the Agent object.
 - Do not send removed/display-only Agent fields such as `agent_key`, `display_name`, `tags`, or `permissions`.

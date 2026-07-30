@@ -182,6 +182,32 @@ Memory notes:
 - `agent memory facts list/create/update/delete` manages versioned long-term facts.
 - The gateway derives `tenant_id` and `agent_record_id`; do not put scope fields in payload files.
 
+### Medium-term memory policy
+
+For a registered Agent, put the optional policy at `config.memory_policy` in a concise register payload, or at `agent_config.memory_policy` in a low-level create/update payload. Omit it to use the platform default; it is primarily for restricting an Agent's memory behavior.
+
+For a persistent session with a complete scope, `medium_term.recall` and `medium_term.learn` both default to `true`:
+
+- `recall`: retrieve relevant semantic medium-term memory and inject it as background context for a later persistent run.
+- `learn`: enqueue a qualifying completed persistent run for medium-term memory extraction; it does not write a memory synchronously in the chat request.
+
+An ephemeral run (no `metadata.session_id`) defaults both fields to `false`. A persistent run also needs its terminal `metadata.user_id`; a missing scope identity, user memory opt-out, or Worker `MEMORY_MEDIUM_TERM_ENABLED=false` forces both fields off. The Agent policy and a top-level chat-request `memory_policy` can further turn a field off, but cannot reopen a higher-level closure. Long-term recall and writes remain disabled by default.
+
+Use this fragment to explicitly disable medium-term memory for one stored Agent:
+
+```json
+{
+  "config": {
+    "memory_policy": {
+      "medium_term": {
+        "recall": false,
+        "learn": false
+      }
+    }
+  }
+}
+```
+
 ```bash
 seaagent agent memory list <agent-id> --end-user-id <user-id>
 seaagent agent memory export <agent-id> --end-user-id <user-id>

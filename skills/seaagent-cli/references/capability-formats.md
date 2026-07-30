@@ -357,6 +357,7 @@ Rules:
 - Agent register creates an active agent by default. `enabled` is kept only for payload compatibility.
 - To mark a registered agent as a sandbox agent, add `config.runtime.sandbox`. The presence of `sandbox` is the type marker; do not add `enabled`.
 - For sandbox agents, set `config.runtime.sandbox.sandbox_template` to `react-game` or `react-web`.
+- For medium-term memory, put optional registered-Agent policy at `config.memory_policy`. Omit it to use the persistent-session defaults described in [Memory policy](#memory-policy).
 - Do not send Agent `display_name`, `description`, `tags`, `permissions`, or `public`; those are removed or server-owned display fields after slimming.
 
 Sandbox concise-register config example:
@@ -431,6 +432,44 @@ To mark a low-level agent as a sandbox agent, add `agent_config.runtime.sandbox`
 ```
 
 `runtime.sandbox` is a type marker. Do not use `runtime.sandbox.enabled`; sandbox behavior is selected by the presence of the object. Allowed `runtime.sandbox.sandbox_template` values are `react-game` and `react-web`.
+
+### Memory policy
+
+Use `config.memory_policy` in a concise Agent register payload or
+`agent_config.memory_policy` in a low-level Agent create/update payload. The
+policy is optional: it restricts an Agent from the platform default and should
+normally be omitted when the default behavior is wanted.
+
+```json
+{
+  "agent_config": {
+    "memory_policy": {
+      "medium_term": {
+        "recall": false,
+        "learn": false
+      }
+    }
+  }
+}
+```
+
+For a persistent session with a complete memory scope, the default values are:
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `medium_term.recall` | `true` | Retrieve relevant semantic medium-term memory as untrusted background context for a later persistent run. |
+| `medium_term.learn` | `true` | Queue a qualifying completed persistent run for asynchronous medium-term extraction. It does not synchronously create a memory in the chat request. |
+| `long_term.recall` | `false` | Do not inject long-term facts unless separately enabled. |
+| `long_term.write_mode` | `"disabled"` | Do not write long-term facts unless separately enabled. |
+
+No `metadata.session_id` means an ephemeral run, where both medium-term fields
+default to `false`. `session_id` only selects persistent versus ephemeral mode;
+it cannot authorize cross-session memory by itself. A persistent run also needs
+the terminal `metadata.user_id` and the gateway-derived tenant/Agent scope.
+Missing scope identity, user memory opt-out, or Worker
+`MEMORY_MEDIUM_TERM_ENABLED=false` forces both medium-term fields to `false`.
+Agent policy and a top-level chat-request `memory_policy` may further turn a
+field off, but cannot reopen a higher-level closure.
 
 ## Hook Management
 
