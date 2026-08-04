@@ -1,14 +1,14 @@
 ---
 name: seaagent-cli
-description: "Use this skill when working with the local seaagent CLI for SeaArt agent-gateway: configuring endpoints and API keys, registering/updating/deleting tools, skills, and agents, listing catalog entries, resolving runtime configs, and running or inspecting chats."
-version: "2026.07.30"
+description: "Use this skill when working with the local seaagent CLI for SeaArt agent-gateway: configuring endpoints and API keys, managing MCP servers, registering/updating/deleting tools, skills, and agents, listing catalog entries, resolving runtime configs, and running or inspecting chats."
+version: "2026.08.04"
 ---
 
 # Seaagent CLI
 
 ## Scope
 
-Use this skill when a task involves the local `seaagent` CLI project or the SeaArt `agent-gateway` CLI workflow. The CLI mirrors the current gateway HTTP API and is intended for registration, discovery, capability inspection, lifecycle maintenance, and chat testing.
+Use this skill when a task involves the local `seaagent` CLI project or the SeaArt `agent-gateway` CLI workflow. The CLI mirrors the current gateway HTTP API and is intended for registration, MCP server management, discovery, capability inspection, lifecycle maintenance, and chat testing.
 
 Repositories:
 
@@ -63,16 +63,21 @@ For guided create/update work, read the relevant manager workflow before
 assembling payloads:
 
 - [Tool Manager Workflow](references/tool-manager-workflow.md): create or update HTTP Tools from SDK manifests, OpenAPI metadata, service endpoints, or existing Tool ids.
+- [MCP Manager Workflow](references/mcp-manager-workflow.md): register or update an independent MCP server, discover its upstream tools, or prepare a controlled proxied call.
 - [Skill Manager Workflow](references/skill-manager-workflow.md): create or update Skills by selecting active Tools, writing instructions, and building `required_tools`.
 - [Agent Manager Workflow](references/agent-manager-workflow.md): create or update Agents by selecting active Skills, writing `system_prompt`, and preserving runtime config.
 
-If a request spans multiple resource types, work bottom-up: Tool first, then
-Skill, then Agent. Do not register or update any resource until the final
-payload for that resource has been shown to the user and explicitly approved.
+If a request spans Tool, Skill, and Agent resources, work bottom-up: Tool
+first, then Skill, then Agent. MCP servers are independent resources and do
+not create Tool records or enter the Agent runtime chain. Do not register or
+update any resource until the final payload for that resource has been shown to
+the user and explicitly approved.
 
 Use the repo examples as starting points:
 
 - `examples/tool-web-fetch.json`: tool register payload
+- `examples/mcp-search.json`: MCP server register payload
+- `examples/mcp-call.json`: MCP tools/call payload
 - `examples/skill-web.json`: skill register payload
 - `examples/agent-web.json`: agent register payload
 - `examples/agent-sandbox.json`: low-level sandbox agent payload using `agent_config.runtime.sandbox`
@@ -97,7 +102,7 @@ Prefer reusing active tools by their immutable Tool UUID. In skill manifests, re
 
 Command argument conventions:
 
-- `<tool-id>`, `<skill-id>`, and `<agent-id>` must be the immutable UUID returned by the gateway.
+- `<tool-id>`, `<mcp-id>`, `<skill-id>`, and `<agent-id>` must be the immutable UUID returned by the gateway.
 - `--status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`; use `active` for normal discovery.
 - List-command `--limit` is bounded by the gateway to `1..200`; `chat events` defaults to `1000` and warns when more pages may exist.
 - `--offset` must be `0` or greater; negative values are normalized to `0`.
@@ -148,6 +153,30 @@ seaagent tool delete <tool-id>
 ```
 
 Use `tool resolve` before referencing a tool from a skill; it shows the normalized Tool fields that Agent Worker will receive. Register/update payloads should describe runtime behavior, not server-side display metadata. HTTP tools may provide top-level `service_name` at the same JSON level as `name`; if omitted, gateway derives it from the endpoint host. Do not provide `inject_user_credentials` in user-facing payloads; gateway defaults it to `false`, manages it as a top-level Tool field, and forwards it beside `name` to Worker.
+
+MCP servers:
+
+```bash
+seaagent mcp register -f <payload.json|yaml>
+seaagent mcp list [--search <value>] [--status <value>] [--public true|false] [--provider <value>] [--include-deleted] [--limit <n>] [--offset <n>]
+seaagent mcp get <mcp-id> [--include-deleted]
+seaagent mcp update <mcp-id> -f <payload.json|yaml>
+seaagent mcp delete <mcp-id>
+seaagent mcp tools <mcp-id>
+seaagent mcp call <mcp-id> -f <payload.json|yaml>
+```
+
+MCP servers are independent gateway records, not `runtime_type: "mcp"` Tool
+records. A register/update payload requires `name` and `server_url`; transport
+defaults to `streamable-http`, with `sse` reserved for legacy endpoints. Gateway
+binds `provider` from `X-User-ID`, never returns stored upstream header values,
+and exposes only `header_keys`. On update, omit `headers` to preserve stored
+values or send `headers: {}` to clear them. `register`, `update`, and `delete`
+require `X-Flag: 1`, which the CLI adds after confirmation. `call` is not a
+registry write but still requires confirmation because it can execute an
+arbitrary upstream tool. Private server `tools` and `call` require the
+configured `user-id` to match the provider unless gateway grants administrative
+access.
 
 Skills:
 
@@ -266,8 +295,8 @@ seaagent sandbox delete <sandbox-run-id>
 ## Registry Mutation Workflow
 
 Registry mutations are gated operations. Before running any `agent`, `skill`,
-or `tool` register/update command, ask the user for explicit approval and wait
-for a clear affirmative response. This applies to:
+`tool`, or `mcp` register/update command, ask the user for explicit approval
+and wait for a clear affirmative response. This applies to:
 
 - `seaagent agent register`
 - `seaagent agent update`
@@ -279,6 +308,9 @@ for a clear affirmative response. This applies to:
 - `seaagent tool register`
 - `seaagent tool update`
 - `seaagent tool delete`
+- `seaagent mcp register`
+- `seaagent mcp update`
+- `seaagent mcp delete`
 
 Show the intended endpoint, operation, resource type, resource UUID when
 available, and payload file path or concise payload summary before asking.
@@ -287,6 +319,11 @@ Do not use CLI flags, environment variables, or non-interactive scripts to
 bypass this approval step. On macOS, the CLI uses a desktop confirmation dialog
 for registry mutations; wait for the user to approve that dialog before
 continuing.
+
+`seaagent mcp call` is not a registry mutation, but it can execute an arbitrary
+upstream MCP tool and uses the same explicit confirmation process. Before a
+call, show the MCP server UUID, upstream tool name, arguments summary, and
+timeout. Do not invoke it merely to inspect a server; use `mcp get` or `mcp tools`.
 
 For gateway mutations, use this order:
 
@@ -300,6 +337,11 @@ For gateway mutations, use this order:
    ```bash
    seaagent chat run --no-stream <agent-id> "In one sentence, explain what you can do without calling any tools."
    ```
+
+For an MCP server, use `mcp list --search` before register, then `mcp get` and
+`mcp tools` after a write. Do not add the server to a Tool or Agent payload:
+MCP management is intentionally outside the existing Tool and Agent runtime
+resolution path.
 
 On the current SeaArt gateway, agent `category` is constrained to `fabric` or `seaactor`. Use `fabric` for normal runnable assistants unless the user explicitly needs another category. A known-good model config for SeaArt media agents is:
 
@@ -363,7 +405,7 @@ Long media-generation requests can exceed the front proxy timeout and return `50
 - First confirm a no-tool smoke test completes; otherwise fix agent category/model config.
 - Try `chat run` streaming and `chat run --ws`. The CLI automatically resumes interrupted streams from the last received event seq and does not stop locally by retry count unless `--stream-retries <n>` is set. Some deployed proxies may still reject WebSocket upgrades (`non-101 status`).
 - If no `run_id`, task id, or asset URL is returned, do not claim generation succeeded. Report the gateway timeout and keep the exact prompt/settings for retry or backend log inspection.
-- The CLI currently has no direct `tool invoke` command; tool execution goes through `chat run`.
+- The CLI has no direct registered Tool invoke command; registered Tool execution goes through `chat run`. Independently managed MCP servers can be invoked with `mcp call` after explicit confirmation.
 
 ## Gateway API Mapping
 
@@ -376,6 +418,13 @@ Long media-generation requests can exceed the front proxy timeout and return `50
 - `tool update` -> `PUT /v1/tools/{tool-id}`
 - `tool resolve` -> `GET /v1/tools/{tool-id}/resolve`
 - `tool delete` -> `DELETE /v1/tools/{tool-id}`
+- `mcp register` -> `POST /v1/mcps/register`
+- `mcp list` -> `GET /v1/mcps`
+- `mcp get` -> `GET /v1/mcps/{mcp-id}`
+- `mcp update` -> `PUT /v1/mcps/{mcp-id}`
+- `mcp delete` -> `DELETE /v1/mcps/{mcp-id}`
+- `mcp tools` -> `GET /v1/mcps/{mcp-id}/tools`
+- `mcp call` -> `POST /v1/mcps/{mcp-id}/call`
 - `skill register` -> `POST /v1/skills/register`
 - `skill tool-register` -> `POST /v1/tools/register`
 - `skill list` -> `GET /v1/skills`
@@ -438,11 +487,19 @@ Update endpoints have similar Tool/Skill switching:
 - `skill update` with a register-shape payload updates via `SkillRegisterRequest`; with `manifest`, it updates via `SkillUpdateRequest`.
 - `agent update` only accepts the low-level `AgentUpdateRequest` shape.
 
+MCP server registration is a separate API and has one payload shape. It does
+not create or update `runtime_type: "mcp"` Tool records, and its upstream tools
+are not synchronized into the Tool registry or Agent runtime in this version.
+
 ## Safety Notes
 
 - Do not expose real API keys in logs, commits, or final answers.
 - Confirm the endpoint before mutating gateway state.
 - Use `list`, `get`, `resolve`, and `capabilities` to verify changes.
 - Treat `register`, `update`, `delete`, and `cancel` as gateway-mutating operations.
+- MCP `register`, `update`, and `delete` need `X-User-ID` plus `X-Flag: 1`; the CLI supplies the flag but cannot invent a production-line user ID.
+- MCP `call` can have upstream side effects and must be confirmed. It accepts only a JSON-object `arguments` value, with `timeout_ms` from `0` through `120000`.
+- Do not put real upstream credentials in examples, logs, commits, or summaries. MCP responses expose `header_keys`, never header values; preserve headers by omitting them from an update, or deliberately clear them with `{}`.
+- For a private MCP server, use `mcp tools` and `mcp call` only from its owner production line unless the gateway provides administrative access.
 - Delete commands use the configured `user-id` as `X-User-ID`; it must match owner/creator/updater ownership checks in the gateway.
 - If a command returns `expected JSON response`, inspect the endpoint path and gateway process; the CLI expected JSON but received text or HTML.

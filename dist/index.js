@@ -6,6 +6,7 @@ import { chatCommand } from "./commands/chat.js";
 import { configCommand } from "./commands/config.js";
 import { gameCommand, sandboxCommand } from "./commands/game.js";
 import { hookCommand } from "./commands/hook.js";
+import { mcpCommand } from "./commands/mcp.js";
 import { selfCommand } from "./commands/self.js";
 import { skillCommand } from "./commands/skill.js";
 import { systemCommand } from "./commands/system.js";
@@ -16,7 +17,7 @@ import { maybeNotifySkillUpdate } from "./lib/self-update.js";
 const program = new Command();
 program
     .name("seaagent")
-    .description("CLI for agent-gateway registration, discovery, chat, hooks, and sandbox runs")
+    .description("CLI for agent-gateway registry, MCP management, discovery, chat, hooks, and sandbox runs")
     .version("0.1.0")
     .showHelpAfterError()
     .showSuggestionAfterError()
@@ -25,6 +26,7 @@ program
     .addCommand(systemCommand())
     .addCommand(catalogCommand())
     .addCommand(toolCommand())
+    .addCommand(mcpCommand())
     .addCommand(skillCommand())
     .addCommand(agentCommand())
     .addCommand(hookCommand())
@@ -51,9 +53,11 @@ Common workflows:
   Discover reusable capabilities:
     seaagent catalog list --capability-type skill --status active
     seaagent tool list --search image --status active
+    seaagent mcp list --status active
 
   Register resources from JSON/YAML payload files:
     seaagent tool register -f examples/tool-web-fetch.json
+    seaagent mcp register -f examples/mcp-search.json
     seaagent skill register -f examples/skill-web.json
     seaagent agent register -f examples/agent-web.json
 

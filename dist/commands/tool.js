@@ -51,7 +51,7 @@ Payload notes:
             payloadPath: options.file,
             resource: "tool",
         });
-        const response = await withRegisterErrorHint("tool", "examples/tool-web-fetch.json", () => client.post("/v1/tools/register", payload));
+        const response = await withRegisterErrorHint("tool", "examples/tool-web-fetch.json", () => client.postRegistry("/v1/tools/register", payload));
         warnProviderNormalized("tool", payload, response);
         printJSON(response);
     });
@@ -117,7 +117,7 @@ Examples:
             resource: "tool",
             resourceID: toolID,
         });
-        printJSON(await client.put(`/v1/tools/${encodeURIComponent(toolID)}`, payload));
+        printJSON(await client.putRegistry(`/v1/tools/${encodeURIComponent(toolID)}`, payload));
     });
     cmd
         .command("resolve")
@@ -150,7 +150,7 @@ tool provider to delete the tool.`)
             resource: "tool",
             resourceID: toolID,
         });
-        printJSON(await client.delete(`/v1/tools/${encodeURIComponent(toolID)}`));
+        printJSON(await client.deleteRegistry(`/v1/tools/${encodeURIComponent(toolID)}`));
     });
     return cmd;
 }

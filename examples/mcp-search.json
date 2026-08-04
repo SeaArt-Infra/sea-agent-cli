@@ -1,0 +1,9 @@
+{
+  "name": "sea-search",
+  "description": "Internal search MCP service.",
+  "server_url": "https://mcp.example.com/mcp",
+  "transport": "streamable-http",
+  "public": false,
+  "status": "active",
+  "metadata": {}
+}

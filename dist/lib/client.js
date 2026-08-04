@@ -1,5 +1,6 @@
 import { request, WebSocket } from "undici";
 import { loadConfig } from "./config-store.js";
+const registryWriteHeaders = { "X-Flag": "1" };
 export class AgentGatewayClient {
     apiKey;
     userId;
@@ -34,6 +35,9 @@ export class AgentGatewayClient {
     }
     async post(path, body) {
         return this.requestJSON("POST", this.buildURL(path), body);
+    }
+    async postRegistry(path, body) {
+        return this.requestJSON("POST", this.buildURL(path), body, registryWriteHeaders);
     }
     async postText(path, body) {
         return this.requestText("POST", this.buildURL(path), body);
@@ -104,8 +108,14 @@ export class AgentGatewayClient {
     async put(path, body) {
         return this.requestJSON("PUT", this.buildURL(path), body);
     }
+    async putRegistry(path, body) {
+        return this.requestJSON("PUT", this.buildURL(path), body, registryWriteHeaders);
+    }
     async delete(path, query) {
         return this.requestJSON("DELETE", this.buildURL(path, query));
+    }
+    async deleteRegistry(path, query) {
+        return this.requestJSON("DELETE", this.buildURL(path, query), undefined, registryWriteHeaders);
     }
     async deleteWithBody(path, body) {
         return this.requestJSON("DELETE", this.buildURL(path), body);
@@ -132,13 +142,13 @@ export class AgentGatewayClient {
         }
         return url.toString();
     }
-    async requestJSON(method, url, body) {
-        const text = await this.requestText(method, url, body, "application/json");
+    async requestJSON(method, url, body, additionalHeaders) {
+        const text = await this.requestText(method, url, body, "application/json", additionalHeaders);
         const parsed = parseJSONResponse(text, url);
         return parsed;
     }
-    async requestText(method, url, body, accept = "*/*") {
-        const { headers, payload } = this.buildRequest(method, url, body, accept);
+    async requestText(method, url, body, accept = "*/*", additionalHeaders) {
+        const { headers, payload } = this.buildRequest(method, url, body, accept, additionalHeaders);
         const response = await request(url, {
             method,
             headers,
@@ -190,7 +200,7 @@ export class AgentGatewayClient {
             onChunk(rest);
         }
     }
-    buildRequest(method, url, body, accept = "*/*") {
+    buildRequest(method, url, body, accept = "*/*", additionalHeaders) {
         const headers = {
             accept,
         };
@@ -198,6 +208,9 @@ export class AgentGatewayClient {
         if (body !== undefined) {
             headers["content-type"] = "application/json";
             payload = JSON.stringify(body);
+        }
+        for (const [name, value] of Object.entries(additionalHeaders ?? {})) {
+            headers[name] = value;
         }
         if (this.apiKey) {
             headers.authorization = `Bearer ${this.apiKey}`;

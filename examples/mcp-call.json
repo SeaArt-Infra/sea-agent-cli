@@ -1,0 +1,7 @@
+{
+  "name": "search",
+  "arguments": {
+    "query": "hello"
+  },
+  "timeout_ms": 30000
+}

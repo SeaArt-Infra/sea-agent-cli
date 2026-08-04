@@ -1,6 +1,8 @@
 import { request, WebSocket, type Dispatcher } from "undici";
 import { loadConfig } from "./config-store.js";
 
+const registryWriteHeaders = { "X-Flag": "1" };
+
 export class AgentGatewayClient {
   private readonly endpoint: string;
 
@@ -43,6 +45,10 @@ export class AgentGatewayClient {
 
   async post(path: string, body?: unknown): Promise<unknown> {
     return this.requestJSON("POST", this.buildURL(path), body);
+  }
+
+  async postRegistry(path: string, body?: unknown): Promise<unknown> {
+    return this.requestJSON("POST", this.buildURL(path), body, registryWriteHeaders);
   }
 
   async postText(path: string, body?: unknown): Promise<string> {
@@ -120,8 +126,16 @@ export class AgentGatewayClient {
     return this.requestJSON("PUT", this.buildURL(path), body);
   }
 
+  async putRegistry(path: string, body?: unknown): Promise<unknown> {
+    return this.requestJSON("PUT", this.buildURL(path), body, registryWriteHeaders);
+  }
+
   async delete(path: string, query?: Record<string, string | number | boolean | undefined>): Promise<unknown> {
     return this.requestJSON("DELETE", this.buildURL(path, query));
+  }
+
+  async deleteRegistry(path: string, query?: Record<string, string | number | boolean | undefined>): Promise<unknown> {
+    return this.requestJSON("DELETE", this.buildURL(path, query), undefined, registryWriteHeaders);
   }
 
   async deleteWithBody(path: string, body: unknown): Promise<unknown> {
@@ -151,14 +165,14 @@ export class AgentGatewayClient {
     return url.toString();
   }
 
-  private async requestJSON(method: Dispatcher.HttpMethod, url: string, body?: unknown): Promise<unknown> {
-    const text = await this.requestText(method, url, body, "application/json");
+  private async requestJSON(method: Dispatcher.HttpMethod, url: string, body?: unknown, additionalHeaders?: Record<string, string>): Promise<unknown> {
+    const text = await this.requestText(method, url, body, "application/json", additionalHeaders);
     const parsed = parseJSONResponse(text, url);
     return parsed;
   }
 
-  private async requestText(method: Dispatcher.HttpMethod, url: string, body?: unknown, accept = "*/*"): Promise<string> {
-    const { headers, payload } = this.buildRequest(method, url, body, accept);
+  private async requestText(method: Dispatcher.HttpMethod, url: string, body?: unknown, accept = "*/*", additionalHeaders?: Record<string, string>): Promise<string> {
+    const { headers, payload } = this.buildRequest(method, url, body, accept, additionalHeaders);
     const response = await request(url, {
       method,
       headers,
@@ -214,7 +228,7 @@ export class AgentGatewayClient {
     }
   }
 
-  private buildRequest(method: Dispatcher.HttpMethod, url: string, body: unknown, accept = "*/*"): { headers: Record<string, string>; payload?: string } {
+  private buildRequest(method: Dispatcher.HttpMethod, url: string, body: unknown, accept = "*/*", additionalHeaders?: Record<string, string>): { headers: Record<string, string>; payload?: string } {
     const headers: Record<string, string> = {
       accept,
     };
@@ -222,6 +236,9 @@ export class AgentGatewayClient {
     if (body !== undefined) {
       headers["content-type"] = "application/json";
       payload = JSON.stringify(body);
+    }
+    for (const [name, value] of Object.entries(additionalHeaders ?? {})) {
+      headers[name] = value;
     }
     if (this.apiKey) {
       headers.authorization = `Bearer ${this.apiKey}`;

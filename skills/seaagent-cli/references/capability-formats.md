@@ -4,11 +4,12 @@ These formats come from `~/Desktop/sea_art/agent-gateway` models and services. `
 
 ## Current API Shape
 
-The gateway now keeps Tool and Skill as single current-state records, like Agent. There are no public version create, publish, or lifecycle endpoints.
+The gateway now keeps Tool and Skill as single current-state records, like Agent. There are no public version create, publish, or lifecycle endpoints. MCP servers are separate records: they do not create Tool entries, synchronize upstream tools into the Tool registry, or enter the Agent runtime resolution path.
 
 Create/register uses only `/register`:
 
 - `tool register` -> `POST /v1/tools/register`
+- `mcp register` -> `POST /v1/mcps/register`
 - `skill register` -> `POST /v1/skills/register`
 - `agent register` -> `POST /v1/agents/register`
 - `hook register` -> `POST /v1/hooks/register`
@@ -17,6 +18,8 @@ Maintenance endpoints:
 
 - `tool update <id> -f file` -> `PUT /v1/tools/{id}`
 - `tool delete <id>` -> `DELETE /v1/tools/{id}`
+- `mcp update <id> -f file` -> `PUT /v1/mcps/{id}`
+- `mcp delete <id>` -> `DELETE /v1/mcps/{id}`
 - `skill update <id> -f file` -> `PUT /v1/skills/{id}`
 - `skill delete <id>` -> `DELETE /v1/skills/{id}`
 - `agent update <id> -f file` -> `PUT /v1/agents/{id}`
@@ -32,6 +35,7 @@ Discovery and runtime endpoints:
 
 - `catalog list` -> `GET /v1/catalog`
 - `tool list/get/resolve` -> `GET /v1/tools`, `GET /v1/tools/{id}`, `GET /v1/tools/{id}/resolve`
+- `mcp list/get/tools/call` -> `GET /v1/mcps`, `GET /v1/mcps/{id}`, `GET /v1/mcps/{id}/tools`, `POST /v1/mcps/{id}/call`
 - `skill list/get` -> `GET /v1/skills`, `GET /v1/skills/{id}`
 - `agent list/get/capabilities` -> `GET /v1/agents`, `GET /v1/agents/{id}`, `GET /v1/agents/{id}/capabilities`
 - `agent memory list/export/candidates/facts list` -> `GET /v1/agents/{id}/memory/...`
@@ -79,11 +83,12 @@ Agent register switching:
 Stable identifiers:
 
 - Tool resource id: gateway-generated UUID.
+- MCP server resource id: gateway-generated UUID.
 - Skill resource id: gateway-generated UUID.
 - Skill registry refs use the gateway UUID. `skills.manifest` no longer stores duplicate `id`, `name`, `provider`, or display fields.
 - Agent resource id: gateway-generated UUID.
 - Names should be stable `snake_case`.
-- Registry identity is always the gateway UUID. Do not send removed `tool_key`, `skill_key`, `agent_key`, or request-owned `version` fields; keep `provider` and `name` canonical for display/runtime metadata. Do not keep recovery/import suffixes such as `_restored`, `_backup`, `_copy`, timestamps, or random migration markers in `id` or `name`.
+- Registry identity is always the gateway UUID. Do not send removed `tool_key`, `skill_key`, `agent_key`, or request-owned `version` fields; keep `provider` and `name` canonical for display/runtime metadata. MCP provider is bound from `X-User-ID`, so do not send it in an MCP payload. Do not keep recovery/import suffixes such as `_restored`, `_backup`, `_copy`, timestamps, or random migration markers in `id` or `name`.
 
 Statuses:
 
@@ -102,6 +107,7 @@ Resource and runtime enums:
 - Agent `category`: `fabric`, `seaactor`. This is a gateway Scheduler resource class, not a display category.
 - Skill `metadata` is reserved by the gateway and stored as `{}`; do not put migration notes, display data, or runtime config in `skills.metadata`.
 - Tool `runtime_type`: `http`, `builtin`, `mcp`. Concise payloads still accept old `transport` compatibility values and convert them into `runtime_type`.
+- MCP server `transport`: `streamable-http` (default) or `sse` (legacy only).
 - Worker tool `name` comes only from the outer Tool `name`. The gateway keeps provider-like prefixes such as `seaart:create_polishing`, but removes trailing version suffixes such as `:v1`. Do not put duplicate names in `metadata.name` or `openai_schema.function.name`.
 - HTTP tools keep `endpoint`, `method`, response, and polling config in runtime metadata and forward them to Agent Worker as top-level ToolSpec fields; default method is `POST`. `service_name` and `inject_user_credentials` are not metadata fields; they are top-level Tool fields beside `name`.
 - Tool `response_mode`: `json`, `sse`.
@@ -120,6 +126,74 @@ Schema-slimming guidance:
 - Do not send Tool metadata fields that duplicate outer/current-state data or are not forwarded to Worker: `type`, `name`, `function`, `timeout_ms`, `response_content_type`, `request_headers`, `schema_contract`. Use outer `runtime_type`, not `metadata.type`.
 - Do not send Skill or Agent metadata in gateway payloads; the gateway stores both as `{}`. Keep Skill runtime config in `manifest.config`, Agent runtime config in `config`/`agent_config`, and display data in server/catalog layers.
 - If a deployed gateway still requires an old field, keep it only in a compatibility payload and do not rely on it in Agent Worker runtime behavior.
+
+## MCP Server Management
+
+Use an MCP server record when gateway should securely manage a remote MCP
+endpoint and proxy `tools/list` or `tools/call`. This is distinct from a Tool
+with `runtime_type: "mcp"`: no Tool record is created and Agent runtime does not
+consume this MCP server in the current release.
+
+Register with:
+
+```bash
+seaagent mcp register -f <payload.json>
+```
+
+```json
+{
+  "name": "sea-search",
+  "description": "Internal search MCP service.",
+  "server_url": "https://mcp.example.com/mcp",
+  "transport": "streamable-http",
+  "headers": {},
+  "public": false,
+  "status": "active",
+  "metadata": {}
+}
+```
+
+Rules:
+
+- `name` and `server_url` are required. `server_url` must be an absolute `http` or `https` URL.
+- `transport` defaults to `streamable-http`; allowed values are `streamable-http` and `sse`.
+- `status` defaults to `active` and uses the standard capability values: `draft`, `active`, `deprecated`, `disabled`, or `deleted`.
+- `metadata` must be a JSON object and defaults to `{}`. `public` defaults to `false`.
+- The gateway derives `provider` from `X-User-ID` and drops payload-supplied `provider`, `id`, or `version`. The CLI sends `X-Flag: 1` for MCP `register`, `update`, and `delete`; a configured production-line user ID is still required.
+- `headers` stores upstream request headers. Gateway never serializes their values in MCP responses; it returns only `header_keys`. Do not place real credentials in shared examples, logs, commits, or generated summaries.
+- For `mcp update`, omit `headers` to preserve stored header values. Send `"headers": {}` to deliberately clear them. Do not copy a read response into an update payload.
+
+Discover and invoke tools with:
+
+```bash
+seaagent mcp list --status active
+seaagent mcp get <mcp-id>
+seaagent mcp tools <mcp-id>
+seaagent mcp call <mcp-id> -f <call.json>
+```
+
+`list` accepts `--search`, `--status`, `--public`, `--provider`,
+`--include-deleted`, `--limit`, and `--offset`. Non-administrative lists expose
+public servers plus servers owned by the configured production line. `tools`
+and `call` require an active, non-deleted server; a private server may be used
+only by its owner production line unless the gateway grants administrative
+access.
+
+The call payload is:
+
+```json
+{
+  "name": "search",
+  "arguments": {"query": "hello"},
+  "timeout_ms": 30000
+}
+```
+
+- `name` is required. `arguments` must be a JSON object and defaults to `{}`.
+- `timeout_ms` defaults to the gateway's 30-second setting when omitted or `0`; allowed values are `0..120000`.
+- `tools` returns a `tools` array with upstream names, descriptions, input schemas, and optional output schemas. `call` returns the upstream MCP `content`, optional `structuredContent`, and `isError` result unchanged.
+- Upstream connection or protocol failures return `502`; an upstream timeout returns `504`. A tool-level `isError: true` remains a successful proxy response for the caller to handle.
+- `mcp call` can execute an upstream action, so the CLI requires explicit confirmation even though the gateway endpoint is not a registry write.
 
 ## Tool Concise Register
 
@@ -569,6 +643,9 @@ After mutations, verify with:
 ```bash
 seaagent tool find --provider <provider> --status active
 seaagent tool resolve <tool-id>
+seaagent mcp list --provider <provider> --status active
+seaagent mcp get <mcp-id>
+seaagent mcp tools <mcp-id>
 seaagent skill list --provider <provider> --status active
 seaagent agent list --search <agent_name>
 seaagent agent get <agent-id>

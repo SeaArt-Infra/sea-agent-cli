@@ -75,7 +75,7 @@ Minimal payload:
         payloadPath: options.file,
         resource: "agent",
       });
-      printJSON(await withRegisterErrorHint("agent", "examples/agent-web.json", () => client.post("/v1/agents/register", payload)));
+      printJSON(await withRegisterErrorHint("agent", "examples/agent-web.json", () => client.postRegistry("/v1/agents/register", payload)));
     });
 
   cmd
@@ -98,7 +98,7 @@ Example:
         resource: "agent",
         resourceID: agentID,
       });
-      printJSON(await client.put(`/v1/agents/${encodeURIComponent(agentID)}`, payload));
+      printJSON(await client.putRegistry(`/v1/agents/${encodeURIComponent(agentID)}`, payload));
     });
 
   cmd
@@ -120,7 +120,7 @@ agent owner to delete the agent.`)
         resource: "agent",
         resourceID: agentID,
       });
-      printJSON(await client.delete(`/v1/agents/${encodeURIComponent(agentID)}`));
+      printJSON(await client.deleteRegistry(`/v1/agents/${encodeURIComponent(agentID)}`));
     });
 
   cmd

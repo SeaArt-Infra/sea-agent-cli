@@ -1,7 +1,7 @@
 {
   "name": "@seaart/sea-agent-cli",
   "version": "0.1.0",
-  "description": "CLI for agent-gateway registration and chat workflows.",
+  "description": "CLI for agent-gateway registry, MCP management, and chat workflows.",
   "type": "module",
   "bin": {
     "seaagent": "./dist/index.js"

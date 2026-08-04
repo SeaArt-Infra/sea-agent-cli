@@ -47,7 +47,7 @@ Payload notes:
         payloadPath: options.file,
         resource: "skill",
       });
-      const response = await withRegisterErrorHint("skill", "examples/skill-web.json", () => client.post("/v1/skills/register", payload));
+      const response = await withRegisterErrorHint("skill", "examples/skill-web.json", () => client.postRegistry("/v1/skills/register", payload));
       warnProviderNormalized("skill", payload, response);
       printJSON(response);
     });
@@ -72,7 +72,7 @@ This is a convenience alias for 'seaagent tool register'.`)
         payloadPath: options.file,
         resource: "tool",
       });
-      const response = await withRegisterErrorHint("tool", "examples/tool-web-fetch.json", () => client.post("/v1/tools/register", payload));
+      const response = await withRegisterErrorHint("tool", "examples/tool-web-fetch.json", () => client.postRegistry("/v1/tools/register", payload));
       warnProviderNormalized("tool", payload, response);
       printJSON(response);
     });
@@ -129,7 +129,7 @@ Example:
         resource: "skill",
         resourceID: skillID,
       });
-      printJSON(await client.put(`/v1/skills/${encodeURIComponent(skillID)}`, payload));
+      printJSON(await client.putRegistry(`/v1/skills/${encodeURIComponent(skillID)}`, payload));
     });
 
   cmd
@@ -151,7 +151,7 @@ skill provider to delete the skill.`)
         resource: "skill",
         resourceID: skillID,
       });
-      printJSON(await client.delete(`/v1/skills/${encodeURIComponent(skillID)}`));
+      printJSON(await client.deleteRegistry(`/v1/skills/${encodeURIComponent(skillID)}`));
     });
 
   return cmd;
