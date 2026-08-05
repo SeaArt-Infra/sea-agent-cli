@@ -1,6 +1,6 @@
 ---
 name: seaagent-cli
-description: "Use this skill when working with the local seaagent CLI for SeaArt agent-gateway: configuring endpoints and API keys, registering/updating/deleting tools, skills, and agents, listing catalog entries, resolving runtime configs, and running or inspecting chats."
+description: "Use this skill when working with the local seaagent CLI for SeaArt agent-gateway: configuring endpoints and API keys, registering/updating/deleting Tools, MCP Servers, Skills, and Agents, listing catalog entries, resolving runtime configs, and running or inspecting chats."
 version: "2026.07.30"
 ---
 
@@ -10,10 +10,7 @@ version: "2026.07.30"
 
 Use this skill when a task involves the local `seaagent` CLI project or the SeaArt `agent-gateway` CLI workflow. The CLI mirrors the current gateway HTTP API and is intended for registration, discovery, capability inspection, lifecycle maintenance, and chat testing.
 
-Repositories:
-
-- CLI: `~/Desktop/sea_art/agentctl`
-- Gateway: `~/Desktop/sea_art/agent-gateway`
+Repository: `https://github.com/SeaArt-Infra/sea-agent-cli`
 
 ## First Checks
 
@@ -63,7 +60,7 @@ For guided create/update work, read the relevant manager workflow before
 assembling payloads:
 
 - [Tool Manager Workflow](references/tool-manager-workflow.md): create or update HTTP Tools from SDK manifests, OpenAPI metadata, service endpoints, or existing Tool ids.
-- [Skill Manager Workflow](references/skill-manager-workflow.md): create or update Skills by selecting active Tools, writing instructions, and building `required_tools`.
+- [Skill Manager Workflow](references/skill-manager-workflow.md): create or update Skills by selecting active Tools and MCP Servers, writing instructions, and building `required_tools` plus `config.mcp_servers` when needed.
 - [Agent Manager Workflow](references/agent-manager-workflow.md): create or update Agents by selecting active Skills, writing `system_prompt`, and preserving runtime config.
 
 If a request spans multiple resource types, work bottom-up: Tool first, then
@@ -91,7 +88,7 @@ seaagent tool list --search task --status active
 seaagent skill list --search media --status active
 ```
 
-Prefer reusing active tools by their immutable Tool UUID. In skill manifests, registered Tool refs must use Tool UUIDs; `builtin` and `mcp` refs may still use their runtime-local identifiers.
+Prefer reusing active Tools by their immutable Tool UUID. For MCP runtime bindings, select an active, current-user-visible MCP Server UUID with `seaagent mcp list --status active`; never accept or place a `server_url` in a Skill payload.
 
 ## Commands
 
@@ -148,6 +145,32 @@ seaagent tool delete <tool-id>
 ```
 
 Use `tool resolve` before referencing a tool from a skill; it shows the normalized Tool fields that Agent Worker will receive. Register/update payloads should describe runtime behavior, not server-side display metadata. HTTP tools may provide top-level `service_name` at the same JSON level as `name`; if omitted, gateway derives it from the endpoint host. Do not provide `inject_user_credentials` in user-facing payloads; gateway defaults it to `false`, manages it as a top-level Tool field, and forwards it beside `name` to Worker.
+
+MCP Servers:
+
+```bash
+seaagent mcp register -f <payload.json|yaml>
+seaagent mcp list [--search <value>] [--status <value>] [--public true|false] [--provider <value>] [--include-deleted] [--limit <n>] [--offset <n>]
+seaagent mcp get <mcp-server-id>
+seaagent mcp update <mcp-server-id> -f <payload.json|yaml>
+seaagent mcp delete <mcp-server-id>
+seaagent mcp tools <mcp-server-id>
+seaagent mcp call <mcp-server-id> -f <payload.json|yaml>
+```
+
+For a Skill runtime binding, choose an active, visible MCP Server UUID and
+write it only in `config.mcp_servers`:
+
+```json
+{"config":{"mcp_servers":["<mcp-server-uuid>"]}}
+```
+
+Do not represent an MCP Server UUID in `required_tools`, and do not accept a
+raw MCP URL. Gateway resolves the registered Server URL after checking active
+status and visibility. The endpoint must be unauthenticated Streamable HTTP;
+the Server `public` field controls cross-production-line sharing, so leave it
+false unless sharing is intended. `mcp register`, `mcp update`, `mcp delete`,
+and `mcp call` require explicit confirmation.
 
 Skills:
 

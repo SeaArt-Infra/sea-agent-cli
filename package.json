@@ -15,7 +15,8 @@
     "build": "node scripts/ensure-build-deps.mjs && tsc && node scripts/write-build-info.mjs",
     "prepare": "node scripts/write-build-info.mjs",
     "dev": "tsx src/index.ts",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test": "node --import tsx --test test/mcp-command.test.ts"
   },
   "dependencies": {
     "commander": "^12.1.0",

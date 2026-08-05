@@ -1,0 +1,7 @@
+{
+  "name": "private-search",
+  "description": "Search documentation through MCP.",
+  "server_url": "https://mcp.example.com/mcp",
+  "transport": "streamable-http",
+  "public": false
+}

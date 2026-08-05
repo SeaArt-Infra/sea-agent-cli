@@ -4,7 +4,8 @@ Use this workflow when a user wants to create or update a SeaAgent Skill through
 the `seaagent` CLI. It captures the SeaInfra Skill Manager Agent logic and
 adapts it to CLI commands.
 
-This workflow manages Skill definitions and Tool bindings. It does not create
+This workflow manages Skill definitions, Tool bindings, and registered MCP
+Server bindings. It does not create
 Agents unless the user explicitly asks for the broader Tool -> Skill -> Agent
 flow.
 
@@ -15,6 +16,7 @@ Start by identifying the operation:
 - Create a new Skill from a capability idea.
 - Modify an existing Skill by immutable Skill UUID.
 - Choose Tools for a Skill.
+- Choose registered MCP Servers for a Skill.
 - Produce a valid Skill payload without mutating the gateway yet.
 
 For update, require the exact Skill UUID and fetch current state:
@@ -68,6 +70,21 @@ Only bind visible active Tools that include a UUID and a known `runtime_type`.
 If a requested Tool is missing, inactive, unauthorized, or ambiguous, stop and
 ask how to proceed instead of substituting another Tool silently.
 
+## MCP Server Selection
+
+When the user asks to attach an MCP Server, list only registered Servers:
+
+```bash
+seaagent mcp list --status active --limit 100
+```
+
+Select the UUID of a visible, active MCP Server with an unauthenticated
+Streamable HTTP endpoint. Its `public` field controls cross-production-line
+sharing; a current production line can bind its own private Server. Do not
+accept an MCP URL, infer a UUID, or represent the Server as an item in
+`required_tools`. Gateway resolves the registered Server URL and enforces
+visibility again at Skill registration and Agent runtime.
+
 ## Payload Assembly
 
 Prefer concise Skill payloads:
@@ -96,6 +113,7 @@ Rules:
 - Use the selected Tool record or `tool resolve` result for `type`; do not assume every Tool is `http`.
 - Omit `optional_tools` unless compatibility with an existing payload requires it.
 - Omit `config` unless the user explicitly needs runtime config or an existing Skill config must be preserved.
+- When an MCP Server is selected, set `config.mcp_servers` to its UUID array and preserve any existing unrelated config values.
 - Keep `public: false` unless the user explicitly asks for public visibility.
 - Do not send removed fields such as `skill_key`, `slug`, `entry_file`, `dependencies`, `bundle_uri`, `checksum`, or `owner_id`.
 - Do not put secrets in payloads.
@@ -113,8 +131,8 @@ The `instruction` should include:
 
 1. Confirm `seaagent config get` points at the intended endpoint.
 2. Clarify behavior and target provider.
-3. List active Tools and choose the smallest sufficient set.
-4. Resolve selected Tools.
+3. List active Tools and MCP Servers, then choose the smallest sufficient set.
+4. Resolve selected Tools and record selected MCP Server UUIDs.
 5. Draft the Skill instruction and payload.
 6. Show a summary and the full payload.
 7. Ask for explicit approval.
@@ -136,7 +154,7 @@ seaagent skill get <skill-id>
 2. Fetch current state with `seaagent skill get <skill-id>`.
 3. Summarize the current name, provider, description, required Tools, and instruction structure.
 4. Preserve fields the user did not ask to change.
-5. If Tool bindings change, list and resolve active Tools before editing `required_tools`.
+5. If Tool bindings change, list and resolve active Tools before editing `required_tools`. If MCP Server bindings change, list active MCP Servers before editing `config.mcp_servers`.
 6. Show before/after summary and the full final payload.
 7. Ask for explicit approval.
 8. Update only after approval:

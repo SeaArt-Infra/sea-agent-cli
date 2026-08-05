@@ -9,6 +9,7 @@ The gateway now keeps Tool and Skill as single current-state records, like Agent
 Create/register uses only `/register`:
 
 - `tool register` -> `POST /v1/tools/register`
+- `mcp register` -> `POST /v1/mcps/register`
 - `skill register` -> `POST /v1/skills/register`
 - `agent register` -> `POST /v1/agents/register`
 - `hook register` -> `POST /v1/hooks/register`
@@ -17,6 +18,8 @@ Maintenance endpoints:
 
 - `tool update <id> -f file` -> `PUT /v1/tools/{id}`
 - `tool delete <id>` -> `DELETE /v1/tools/{id}`
+- `mcp update <id> -f file` -> `PUT /v1/mcps/{id}`
+- `mcp delete <id>` -> `DELETE /v1/mcps/{id}`
 - `skill update <id> -f file` -> `PUT /v1/skills/{id}`
 - `skill delete <id>` -> `DELETE /v1/skills/{id}`
 - `agent update <id> -f file` -> `PUT /v1/agents/{id}`
@@ -32,6 +35,7 @@ Discovery and runtime endpoints:
 
 - `catalog list` -> `GET /v1/catalog`
 - `tool list/get/resolve` -> `GET /v1/tools`, `GET /v1/tools/{id}`, `GET /v1/tools/{id}/resolve`
+- `mcp list/get/tools/call` -> `GET /v1/mcps`, `GET /v1/mcps/{id}`, `GET /v1/mcps/{id}/tools`, `POST /v1/mcps/{id}/call`
 - `skill list/get` -> `GET /v1/skills`, `GET /v1/skills/{id}`
 - `agent list/get/capabilities` -> `GET /v1/agents`, `GET /v1/agents/{id}`, `GET /v1/agents/{id}/capabilities`
 - `agent memory list/export/candidates/facts list` -> `GET /v1/agents/{id}/memory/...`
@@ -79,6 +83,7 @@ Agent register switching:
 Stable identifiers:
 
 - Tool resource id: gateway-generated UUID.
+- MCP Server resource id: gateway-generated UUID.
 - Skill resource id: gateway-generated UUID.
 - Skill registry refs use the gateway UUID. `skills.manifest` no longer stores duplicate `id`, `name`, `provider`, or display fields.
 - Agent resource id: gateway-generated UUID.
@@ -102,6 +107,7 @@ Resource and runtime enums:
 - Agent `category`: `fabric`, `seaactor`. This is a gateway Scheduler resource class, not a display category.
 - Skill `metadata` is reserved by the gateway and stored as `{}`; do not put migration notes, display data, or runtime config in `skills.metadata`.
 - Tool `runtime_type`: `http`, `builtin`, `mcp`. Concise payloads still accept old `transport` compatibility values and convert them into `runtime_type`.
+- MCP Server `transport`: `streamable-http` or `sse`. Skill runtime bindings require an unauthenticated `streamable-http` endpoint. The Server `public` field controls cross-production-line sharing, not endpoint authentication.
 - Worker tool `name` comes only from the outer Tool `name`. The gateway keeps provider-like prefixes such as `seaart:create_polishing`, but removes trailing version suffixes such as `:v1`. Do not put duplicate names in `metadata.name` or `openai_schema.function.name`.
 - HTTP tools keep `endpoint`, `method`, response, and polling config in runtime metadata and forward them to Agent Worker as top-level ToolSpec fields; default method is `POST`. `service_name` and `inject_user_credentials` are not metadata fields; they are top-level Tool fields beside `name`.
 - Tool `response_mode`: `json`, `sse`.
@@ -120,6 +126,34 @@ Schema-slimming guidance:
 - Do not send Tool metadata fields that duplicate outer/current-state data or are not forwarded to Worker: `type`, `name`, `function`, `timeout_ms`, `response_content_type`, `request_headers`, `schema_contract`. Use outer `runtime_type`, not `metadata.type`.
 - Do not send Skill or Agent metadata in gateway payloads; the gateway stores both as `{}`. Keep Skill runtime config in `manifest.config`, Agent runtime config in `config`/`agent_config`, and display data in server/catalog layers.
 - If a deployed gateway still requires an old field, keep it only in a compatibility payload and do not rely on it in Agent Worker runtime behavior.
+
+## MCP Server Register
+
+Use with:
+
+```bash
+seaagent mcp register -f <payload.json>
+```
+
+```json
+{
+  "name": "private-search",
+  "description": "Search documentation through MCP.",
+  "server_url": "https://mcp.example.com/mcp",
+  "transport": "streamable-http",
+  "public": false
+}
+```
+
+Rules:
+
+- `name` and `server_url` are required. The gateway binds `provider` from the configured production-line identity; do not supply it in the payload.
+- `transport` defaults to `streamable-http`; `status` defaults to `active`; `metadata` defaults to `{}`.
+- Headers are supported by MCP management but Skill runtime bindings currently require an unauthenticated endpoint. Do not include real credentials in examples, Skill payloads, logs, or commits.
+- `public` controls whether other production lines can see and invoke the registered Server. Keep it `false` unless cross-production-line sharing is intended.
+- To bind a Server to a Skill, use only its returned UUID in `config.mcp_servers`. Never place `server_url` or an MCP Server UUID in `required_tools`.
+- Gateway validates that each bound UUID is active and visible. Skill runtime bindings require an unauthenticated Streamable HTTP endpoint; the registered Server may remain private to its owner.
+- `mcp call` accepts `{ "name": "<tool-name>", "arguments": {}, "timeout_ms": 0 }`; timeout must be between 0 and 120000 milliseconds.
 
 ## Tool Concise Register
 
@@ -248,7 +282,8 @@ Also usable with `skill update <id> -f file` if the payload does not include low
     "model": "gpt-4o",
     "temperature": 0.2,
     "max_turns": 20,
-    "timeout": 600
+    "timeout": 600,
+    "mcp_servers": ["<mcp-server-uuid>"]
   },
   "public": false,
   "enabled": true
@@ -274,6 +309,8 @@ Rules:
 - `provider` defaults to `internal`; gateway returns a UUID `id`.
 - The gateway may normalize `provider` to an internal provider UUID; use the returned provider value for later `--provider` filters.
 - The gateway builds current `skills.manifest` only from `instruction`, `config`, `required_tools`, and `optional_tools`.
+- `config.mcp_servers` must be a duplicate-free array of registered MCP Server UUIDs. Gateway validates their active status and visibility; do not send a URL or a Tool reference here.
+- `config.mcp_servers` is distinct from `required_tools` and `optional_tools`. Fabric discovers the MCP Server's Tools at runtime.
 - Do not send manifest/display fields that duplicate outer Skill data or server-owned display data: `id`, `name`, `version`, `display_name`, `description`, `category`, `provider`, `tags`, and `triggers`.
 - `required_tools` and `optional_tools` must be arrays when present.
 - Use string refs for default registered HTTP Tool UUIDs; the gateway normalizes `"tool-uuid"` to `{ "type": "http", "ref": "tool-uuid" }`.

@@ -12,6 +12,7 @@
 | Configuration | `seaagent config ...` | Store endpoint, API key, and production-line user ID in `~/.seaagent/config.yaml` |
 | System and catalog | `seaagent system ...`, `seaagent catalog ...` | Check gateway health, metrics, and reusable capabilities |
 | Tools | `seaagent tool ...` | Register, list, inspect, resolve, update, and delete executable tools |
+| MCP servers | `seaagent mcp ...` | Register, list, inspect, update, delete, discover tools from, and call MCP servers |
 | Skills | `seaagent skill ...` | Register, list, inspect, update, and delete agent-facing instructions plus tool bindings |
 | Agents | `seaagent agent ...` | Register, inspect, verify, and manage agent memory |
 | Chat | `seaagent chat ...` | Run registered or inline agents, stream responses, replay events, and cancel runs |
@@ -59,6 +60,7 @@ Discover and run:
 ```bash
 seaagent catalog list --capability-type skill --status active
 seaagent tool list --search web --status active
+seaagent mcp list --status active
 seaagent agent list --status active
 seaagent chat run <agent-id> "hello"
 ```
@@ -114,6 +116,7 @@ Common list filters:
 | --- | --- |
 | Catalog | `--capability-type`, `--search`, `--status`, `--public`, `--provider`, `--limit`, `--offset` |
 | Tools | `--search`, `--status`, `--public`, `--provider`, `--limit`, `--offset` |
+| MCP servers | `--search`, `--status`, `--public`, `--provider`, `--include-deleted`, `--limit`, `--offset` |
 | Skills | `--search`, `--status`, `--public`, `--provider`, `--limit`, `--offset` |
 | Agents | `--search`, `--status`, `--owner-id`, `--category`, `--limit`, `--offset` |
 
@@ -126,6 +129,7 @@ Commands with `-f/--file` read JSON or YAML payload files. Use the examples as s
 | File | Purpose |
 | --- | --- |
 | `examples/tool-web-fetch.json` | Tool register payload |
+| `examples/mcp-streamable-http.json` | Private Streamable HTTP MCP server register payload |
 | `examples/skill-web.json` | Skill register payload |
 | `examples/agent-web.json` | Agent register payload |
 | `examples/agent-sandbox.json` | Registered sandbox agent payload |
@@ -139,6 +143,8 @@ Work bottom-up when building capabilities:
 ```bash
 seaagent tool register -f examples/tool-web-fetch.json
 seaagent tool resolve <tool-id>
+seaagent mcp register -f examples/mcp-streamable-http.json
+seaagent mcp tools <mcp-server-id>
 seaagent skill register -f examples/skill-web.json
 seaagent agent register -f examples/agent-web.json
 seaagent agent capabilities <agent-id>
@@ -161,6 +167,23 @@ Tool notes:
 - Use `tool resolve` before binding a tool into a skill; it shows normalized runtime metadata.
 - `service_name` is a top-level Tool field beside `name`; if omitted, the gateway derives it from the endpoint host.
 - Do not send `inject_user_credentials` in user-facing payloads; the gateway manages it.
+
+MCP server notes:
+
+- Use `mcp list --status active` to find MCP Servers visible to the configured production line.
+- `mcp register`, `mcp update`, `mcp delete`, and `mcp call` require confirmation. Calls may have external side effects.
+- For a Skill, use the registered MCP Server UUID, not `server_url`:
+
+  ```json
+  {
+    "config": {
+      "mcp_servers": ["<mcp-server-uuid>"]
+    }
+  }
+  ```
+
+- `config.mcp_servers` is separate from `required_tools`; do not represent an MCP Server UUID as a Tool reference.
+- Gateway checks that each bound Server is active and visible, then resolves its controlled URL. The endpoint must be unauthenticated Streamable HTTP. The Server `public` field controls cross-production-line sharing, so keep it `false` unless sharing is intended.
 
 Skill notes:
 
@@ -295,6 +318,7 @@ seaagent sandbox delete <sandbox-run-id>
 | System | `health`, `metrics` |
 | Catalog | `list` |
 | Tools | `register`, `list`, `find`, `get`, `update`, `resolve`, `delete` |
+| MCP servers | `register`, `list`, `get`, `update`, `delete`, `tools`, `call` |
 | Skills | `register`, `tool-register`, `list`, `get`, `update`, `delete` |
 | Agents | `register`, `list`, `get`, `update`, `capabilities`, `delete` |
 | Hooks | `register`, `update`, `delete` |
