@@ -23,7 +23,7 @@ function agentFromResponse(response) {
     const envelope = asObject(response, "agent response");
     return "data" in envelope ? asObject(envelope.data, "agent response data") : envelope;
 }
-function normalizeReasoningEffort(value) {
+export function normalizeReasoningEffort(value) {
     const normalized = value.trim().toLowerCase();
     if (reasoningEffortValues.includes(normalized)) {
         return normalized;

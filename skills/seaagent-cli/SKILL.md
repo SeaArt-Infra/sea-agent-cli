@@ -249,6 +249,7 @@ Chat:
 
 ```bash
 seaagent chat run <agent-id> "<message>"
+seaagent chat run --model <model> --reasoning-effort <effort> <agent-id> "<message>"
 seaagent chat run --ws <agent-id> "<message>"
 seaagent chat run --stream-retries 5 <agent-id> "<message with limited reconnects>"
 seaagent chat run --agent-config-file <runtime-config.json|yaml> "<message>"
@@ -261,7 +262,9 @@ seaagent chat stream --ws <chat-id> [--after-seq <n>]
 seaagent chat cancel <chat-id>
 ```
 
-`--messages-file` accepts a JSON/YAML messages array, or an object containing a full `ChatCompletionRequest` payload. Object payloads may include fields such as `agent_id`, `skill_ids`, `model`, `stream`, and `metadata.session_id` / `metadata.user_id`; positional `<agent-id>`, `--skill-id`, `--model`, and `--agent-config-file` override the same fields from the file. `skill_ids` temporarily mounts extra Skills for an `agent_id` run when the Agent needs one-off capabilities without changing its saved config; IDs must be active, visible Skill UUIDs, are capped at 20, are merged after the Agent's own Skills, and cannot be used with `agent_config` / `--agent-config-file`. Skill runtime config only fills Agent defaults that are unset. SDK field names for the same option are Go `SkillIDs`, JS `skillIds`, and Python `skill_ids`. Use it for OpenAI-style multimodal content parts such as text plus `image_url` / `video_url`.
+`--reasoning-effort` temporarily sends the platform unified `reasoning_effort` value without changing the saved Agent default. Supported values are `off`, `on`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, and `ultra`; it can be combined with `--model` for one chat run.
+
+`--messages-file` accepts a JSON/YAML messages array, or an object containing a full `ChatCompletionRequest` payload. Object payloads may include fields such as `agent_id`, `skill_ids`, `model`, `reasoning_effort`, `stream`, and `metadata.session_id` / `metadata.user_id`; positional `<agent-id>`, `--skill-id`, `--model`, `--reasoning-effort`, and `--agent-config-file` override the same fields from the file. `skill_ids` temporarily mounts extra Skills for an `agent_id` run when the Agent needs one-off capabilities without changing its saved config; IDs must be active, visible Skill UUIDs, are capped at 20, are merged after the Agent's own Skills, and cannot be used with `agent_config` / `--agent-config-file`. Skill runtime config only fills Agent defaults that are unset. SDK field names for the same option are Go `SkillIDs`, JS `skillIds`, and Python `skill_ids`. Use it for OpenAI-style multimodal content parts such as text plus `image_url` / `video_url`.
 
 Streaming chat renders assistant text to stdout. It prints the chat `run_id` to stderr when known, and prints terminal `usage` plus `langfuse_trace_id` to stderr when the final event includes that metadata.
 
@@ -453,7 +456,7 @@ Tool and Skill use one exposed create endpoint, `/register`, but the gateway han
 - Skill and Agent metadata are reserved by gateway and stored as `{}`; put Skill runtime config in `manifest`, and Agent runtime config in `config`/`agent_config`.
 - Agent register shape: no `model_config` or `agent_config`; the gateway parses `AgentRegisterRequest`.
 - Agent low-level shape: includes `model_config` or `agent_config`; the gateway parses `AgentCreateRequest` and returns a UUID `id`.
-- Agent model names are normalized on create/update: in `model.default`, `model.allowed`, `model_config.default`, and `model_config.allowed`, provider or routing prefixes such as `vertex_ai/`, `openai/`, or `gpt/` are removed and only the model name after the slash is stored. `model.reasoning_effort` / `model_config.reasoning_effort` is optional and must be one of `minimal`, `low`, `medium`, or `high`.
+- Agent model names are normalized on create/update: in `model.default`, `model.allowed`, `model_config.default`, and `model_config.allowed`, provider or routing prefixes such as `vertex_ai/`, `openai/`, or `gpt/` are removed and only the model name after the slash is stored. `model.reasoning_effort` / `model_config.reasoning_effort` is optional and must be one of `off`, `on`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, or `ultra`.
 
 Update endpoints have similar Tool/Skill switching:
 

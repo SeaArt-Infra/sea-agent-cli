@@ -43,7 +43,7 @@ function agentFromResponse(response: unknown): Record<string, unknown> {
   return "data" in envelope ? asObject(envelope.data, "agent response data") : envelope;
 }
 
-function normalizeReasoningEffort(value: string): ReasoningEffort {
+export function normalizeReasoningEffort(value: string): ReasoningEffort {
   const normalized = value.trim().toLowerCase();
   if ((reasoningEffortValues as readonly string[]).includes(normalized)) {
     return normalized as ReasoningEffort;

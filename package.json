@@ -16,7 +16,7 @@
     "prepare": "node scripts/write-build-info.mjs",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
-    "test": "node --import tsx --test test/mcp-command.test.ts"
+    "test": "node --import tsx --test test/*.test.ts src/commands/*.test.ts"
   },
   "dependencies": {
     "commander": "^12.1.0",

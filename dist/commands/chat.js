@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import { normalizeReasoningEffort, reasoningEffortHelp } from "./agent-update-payload.js";
 import { AgentGatewayClient } from "../lib/client.js";
 import { readPayload } from "../lib/files.js";
 import { addHelpText } from "../lib/help.js";
@@ -11,6 +12,7 @@ Streaming is enabled by default. Use --no-stream when another agent needs raw JS
 Examples:
   seaagent chat run <agent-id> "hello"
   seaagent chat run --model gpt-5.1-chat <agent-id> "test another model"
+  seaagent chat run --reasoning-effort high <agent-id> "think carefully"
   seaagent chat run --no-stream <agent-id> "return JSON"
   seaagent chat run --ws <agent-id> "stream over WebSocket"
   seaagent chat run --skill-id <skill-id> <agent-id> "run with an extra skill"
@@ -28,6 +30,7 @@ Examples:
         .option("--messages-file <path>", "JSON/YAML messages array or full chat payload file")
         .option("--skill-id <id>", "temporary Skill UUID to mount for this chat; repeat for multiple Skills", collectSkillIDOption, [])
         .option("--model <model>", "override the agent model for this chat run")
+        .option("--reasoning-effort <effort>", `override the reasoning effort for this chat run: ${reasoningEffortHelp()}`)
         .option("--no-stream", "disable streaming")
         .option("--ws", "use WebSocket streaming")
         .option("--stream-retries <number>", "stream reconnect attempts after interruption; -1 means unlimited", "-1")
@@ -37,6 +40,7 @@ Examples:
 Examples:
   seaagent chat run <agent-id> "Search recent AI news"
   seaagent chat run --model gpt-5.1-chat <agent-id> "Compare this model"
+  seaagent chat run --reasoning-effort high <agent-id> "Compare this model"
   seaagent chat run --no-stream <agent-id> "Use one sentence"
   seaagent chat run --ws <agent-id> "Stream with WebSocket"
   seaagent chat run --skill-id 11111111-1111-1111-1111-111111111111 <agent-id> "Use the extra skill"
@@ -48,6 +52,7 @@ Notes:
   - Either [agent-id] or --agent-config-file is required.
   - --skill-id can be repeated and sends skill_ids with agent_id for one-off extra Skills; IDs must be active visible UUIDs, capped at 20, and cannot be used with --agent-config-file or payload agent_config.
   - --messages-file accepts a messages array, or an object containing a full ChatCompletionRequest payload.
+  - --reasoning-effort applies only to this chat request and does not change the saved Agent configuration.
   - With streaming enabled, stdout contains assistant text; stderr contains run_id, progress, tool status, terminal usage, and langfuse_trace_id when available.
   - With --no-stream, stdout is gateway JSON enriched with response.message.content and response.metadata.langfuse_trace_id when stored events are available.`)
         .action(async function (agentID, messageParts, options) {
@@ -120,13 +125,16 @@ const CHAT_EVENTS_PAGE_LIMIT = 1000;
 function collectSkillIDOption(value, previous) {
     return [...previous, value];
 }
-async function chatPayloadFromCommand(agentID, messageParts, options, streamSource) {
+export async function chatPayloadFromCommand(agentID, messageParts, options, streamSource) {
     const payload = await baseChatPayloadFromCommand(messageParts, options.messagesFile);
     if (agentID) {
         payload.agent_id = agentID;
     }
     if (options.model?.trim()) {
         payload.model = options.model.trim();
+    }
+    if (options.reasoningEffort?.trim()) {
+        payload.reasoning_effort = normalizeReasoningEffort(options.reasoningEffort);
     }
     if (options.agentConfigFile) {
         payload.agent_config = await readPayload(options.agentConfigFile);

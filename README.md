@@ -163,6 +163,16 @@ The command reads the current Agent, changes only
 for confirmation before updating. Supported values are `off`, `on`, `minimal`,
 `low`, `medium`, `high`, `xhigh`, `max`, and `ultra`.
 
+Temporarily override the reasoning effort for one chat without changing the
+saved Agent configuration:
+
+```bash
+seaagent chat run --reasoning-effort high <agent-id> "请认真分析这个问题"
+```
+
+It can be combined with `--model` when both the model and reasoning effort
+need a one-off override.
+
 Agent `skills` remains the complete Skill UUID array. Add a UUID to
 `pre_skills` only when that Skill is expected in most runs and the model needs
 its full instruction before deciding what to do. Gateway resolves each
@@ -265,6 +275,7 @@ Run a registered agent:
 
 ```bash
 seaagent chat run <agent-id> "Search recent AI news"
+seaagent chat run --model gpt-5.5 --reasoning-effort high <agent-id> "Compare this model"
 seaagent chat run --ws <agent-id> "Stream over WebSocket"
 seaagent chat run --stream-retries 5 <agent-id> "Limit reconnect attempts"
 seaagent chat run --no-stream <agent-id> "Return raw JSON"
@@ -283,7 +294,7 @@ Send a messages array or full chat payload file:
 seaagent chat run --messages-file examples/chat-multimodal.json <agent-id>
 ```
 
-Object payload files can include any `ChatCompletionRequest` fields, such as `agent_id`, `skill_ids`, `model`, `stream`, and `metadata.session_id` / `metadata.user_id`. Positional `<agent-id>`, `--skill-id`, `--model`, and `--agent-config-file` override the same fields from the file. `skill_ids` temporarily mounts extra active, visible Skills for a registered Agent run, is capped at 20 UUIDs, merges after the Agent's own Skills, and cannot be used with `agent_config`.
+Object payload files can include any `ChatCompletionRequest` fields, such as `agent_id`, `skill_ids`, `model`, `reasoning_effort`, `stream`, and `metadata.session_id` / `metadata.user_id`. Positional `<agent-id>`, `--skill-id`, `--model`, `--reasoning-effort`, and `--agent-config-file` override the same fields from the file. `skill_ids` temporarily mounts extra active, visible Skills for a registered Agent run, is capped at 20 UUIDs, merges after the Agent's own Skills, and cannot be used with `agent_config`.
 
 Inspect and replay existing chats:
 

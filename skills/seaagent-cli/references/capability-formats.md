@@ -584,6 +584,8 @@ For a rejection, `approved` must be boolean `false`; optional `code` and `messag
 {
   "agent_id": "owner_id:agent_name:v1",
   "skill_ids": ["11111111-1111-1111-1111-111111111111"],
+  "model": "gpt-5.5",
+  "reasoning_effort": "high",
   "messages": [{"role": "user", "content": "hello"}],
   "stream": true,
   "metadata": {}
@@ -591,9 +593,11 @@ For a rejection, `approved` must be boolean `false`; optional `code` and `messag
 ```
 
 - Positional `<agent-id>` sets `agent_id`.
+- `--model` temporarily sets `model` for this chat request.
+- `--reasoning-effort` temporarily sets the platform unified `reasoning_effort` for this chat request. Its accepted values are `off`, `on`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, and `ultra`. Neither option changes the saved Agent configuration.
 - `--agent-config-file` sets `agent_config` and allows running with inline runtime config instead of an agent id.
 - `--skill-id` sets `skill_ids`, temporarily mounting extra Skills for one chat run without changing the registered Agent. `skill_ids` can only be used with `agent_id`; `agent_config + skill_ids` is rejected by Agent Gateway. Values must be active, visible Skill UUIDs, are capped at 20, merge after the registered Agent's own Skills, dedupe repeated IDs, and only fill Agent runtime defaults when the Agent has not set them.
-- `--messages-file` sets `messages` from a JSON/YAML array or merges an object containing a full `ChatCompletionRequest` payload, including `metadata.session_id` / `metadata.user_id` and OpenAI-style multimodal content parts such as `{"type":"text","text":"Describe this image"}` and `{"type":"image_url","image_url":{"url":"https://..."}}`. SDK field names for `skill_ids` are Go `SkillIDs`, JS `skillIds`, and Python `skill_ids`.
+- `--messages-file` sets `messages` from a JSON/YAML array or merges an object containing a full `ChatCompletionRequest` payload, including `model`, `reasoning_effort`, `metadata.session_id` / `metadata.user_id`, and OpenAI-style multimodal content parts such as `{"type":"text","text":"Describe this image"}` and `{"type":"image_url","image_url":{"url":"https://..."}}`. Positional `<agent-id>`, `--model`, and `--reasoning-effort` override their corresponding payload-file fields. SDK field names for `skill_ids` are Go `SkillIDs`, JS `skillIds`, and Python `skill_ids`.
 - `--no-stream` sets `stream: false`; when stored events are available, CLI enriches the JSON response with `response.message.content`.
 - `--ws` keeps streaming enabled and uses `GET /v1/chat/completions/ws`; the CLI sends the `ChatCompletionRequest` JSON as the first WebSocket message.
 - `chat stream --ws <chat-id>` uses `GET /v1/chats/{chat-id}/ws?after_seq=...` to replay an existing run over WebSocket.
