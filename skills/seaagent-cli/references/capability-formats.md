@@ -443,7 +443,7 @@ Agent `metadata` is stored as `{}`. Every skill ref must resolve to active Skill
 
 Gateway normalizes `model_config.default` and `model_config.allowed` by removing provider or routing prefixes before storage. For example, `vertex_ai/gemini-3-flash-preview`, `openai/gpt-4o`, and `gpt/gpt-4.1-mini` are stored as `gemini-3-flash-preview`, `gpt-4o`, and `gpt-4.1-mini`.
 
-`model.reasoning_effort` / `model_config.reasoning_effort` is optional. Supported values are `minimal`, `low`, `medium`, and `high`; the gateway forwards it to the Agent Worker as `agent.reasoning_effort`.
+`model.reasoning_effort` / `model_config.reasoning_effort` is optional. Supported values are `off`, `on`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, and `ultra`; the gateway forwards it to the Agent Worker as `agent.reasoning_effort`.
 
 Use the low-level update shape to fix runnable-agent issues after registration. If a no-tool chat smoke test returns a proxy timeout, first verify/update `category: "fabric"` and a known-good `model_config` before investigating tool behavior.
 

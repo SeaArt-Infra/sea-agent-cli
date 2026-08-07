@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import { reasoningEffortHelp, updatePayloadWithReasoningEffort } from "./agent-update-payload.js";
 import { AgentGatewayClient } from "../lib/client.js";
 import { confirmRegistryMutation } from "../lib/confirmation.js";
 import { readPayload } from "../lib/files.js";
@@ -79,14 +80,28 @@ Minimal payload:
         .command("update")
         .description("Update an agent via /v1/agents/{agent-id}")
         .argument("<agent-id>", "agent UUID")
-        .requiredOption("-f, --file <path>", "JSON/YAML request file")
+        .option("-f, --file <path>", "JSON/YAML request file")
+        .option("--reasoning-effort <effort>", `set the saved default reasoning effort: ${reasoningEffortHelp()}`)
         .addHelpText("after", `
 
-Example:
-  seaagent agent update <agent-id> -f payloads/agent-update.json`)
+Examples:
+  seaagent agent update <agent-id> -f payloads/agent-update.json
+  seaagent agent update <agent-id> --reasoning-effort high
+
+Use either --file for a complete update payload or --reasoning-effort to change
+only the saved default reasoning effort. The latter reads the current Agent and
+preserves its other configuration.`)
         .action(async (agentID, options) => {
+        if (options.file && options.reasoningEffort) {
+            throw new Error("use either --file or --reasoning-effort, not both");
+        }
+        if (!options.file && !options.reasoningEffort) {
+            throw new Error("--file or --reasoning-effort is required");
+        }
         const client = await AgentGatewayClient.fromConfig();
-        const payload = await readPayload(options.file);
+        const payload = options.reasoningEffort
+            ? updatePayloadWithReasoningEffort(await client.get(`/v1/agents/${encodeURIComponent(agentID)}`), options.reasoningEffort)
+            : await readPayload(options.file);
         await confirmRegistryMutation({
             action: "update",
             endpoint: client.getEndpoint(),

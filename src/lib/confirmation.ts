@@ -105,6 +105,15 @@ function summarizePayload(payload: unknown): string | undefined {
     const value = stringField(payload, field);
     return value ? [`${field}=${value}`] : [];
   });
+  const modelConfig = isRecord(payload.model_config) ? payload.model_config : undefined;
+  const defaultModel = modelConfig ? stringField(modelConfig, "default") : undefined;
+  const reasoningEffort = modelConfig ? stringField(modelConfig, "reasoning_effort") : undefined;
+  if (defaultModel) {
+    parts.push(`model=${defaultModel}`);
+  }
+  if (reasoningEffort) {
+    parts.push(`reasoning_effort=${reasoningEffort}`);
+  }
   return parts.length > 0 ? parts.join(", ") : undefined;
 }
 
