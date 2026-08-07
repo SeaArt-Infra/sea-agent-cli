@@ -15,7 +15,7 @@ Agent categories:
   seaactor  SeaActor scheduler pool
 
 Common list filters:
-  --search <value>      Match agent names and metadata
+  --search <value>      Match agent names or UUIDs
   --status <value>      draft | active | deprecated | disabled | deleted
   --owner-id <value>    Owner/production-line ID
   --category <value>    fabric | seaactor
@@ -121,7 +121,7 @@ agent owner to delete the agent.`)
     cmd
         .command("list")
         .description("List agents")
-        .option("--search <value>", "search text")
+        .option("--search <value>", "agent name or UUID")
         .option("--status <value>", "draft, active, deprecated, disabled, or deleted")
         .option("--owner-id <value>", "owner ID")
         .option("--category <fabric|seaactor>", "scheduler category")

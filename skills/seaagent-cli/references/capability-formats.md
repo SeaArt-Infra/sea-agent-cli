@@ -647,7 +647,7 @@ seaagent mcp list --provider <provider> --status active
 seaagent mcp get <mcp-id>
 seaagent mcp tools <mcp-id>
 seaagent skill list --provider <provider> --status active
-seaagent agent list --search <agent_name>
+seaagent agent list --search <agent_name_or_id>
 seaagent agent get <agent-id>
 seaagent agent capabilities <agent-id>
 seaagent chat run --no-stream <agent-id> "In one sentence, explain what you can do without calling any tools."
