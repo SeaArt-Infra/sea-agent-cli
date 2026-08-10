@@ -296,6 +296,8 @@ seaagent chat run --messages-file examples/chat-multimodal.json <agent-id>
 
 Object payload files can include any `ChatCompletionRequest` fields, such as `agent_id`, `skill_ids`, `model`, `reasoning_effort`, `stream`, and `metadata.session_id` / `metadata.user_id`. Positional `<agent-id>`, `--skill-id`, `--model`, `--reasoning-effort`, and `--agent-config-file` override the same fields from the file. `skill_ids` temporarily mounts extra active, visible Skills for a registered Agent run, is capped at 20 UUIDs, merges after the Agent's own Skills, and cannot be used with `agent_config`.
 
+When a chat payload has `agent_id`, the CLI sends the same value in `X-Agent-ID` and the JSON body; the gateway gives the header priority during the compatibility rollout.
+
 Inspect and replay existing chats:
 
 ```bash

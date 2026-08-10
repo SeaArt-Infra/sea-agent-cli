@@ -50,6 +50,10 @@ export class AgentGatewayClient {
         if (this.userId) {
             headers["X-User-ID"] = this.userId;
         }
+        const agentID = chatAgentID(path, initialMessage);
+        if (agentID) {
+            headers["X-Agent-ID"] = agentID;
+        }
         if (isDebugEnabled()) {
             console.error(`WS ${url}`);
         }
@@ -205,6 +209,10 @@ export class AgentGatewayClient {
         if (this.userId) {
             headers["X-User-ID"] = this.userId;
         }
+        const agentID = chatAgentID(url, body);
+        if (agentID) {
+            headers["X-Agent-ID"] = agentID;
+        }
         if (isDebugEnabled()) {
             console.error(`${method} ${url}`);
         }
@@ -231,6 +239,16 @@ export function normalizeAgentGatewayEndpoint(endpoint) {
 }
 function isDebugEnabled() {
     return process.env.SEAAGENT_DEBUG === "1";
+}
+function chatAgentID(path, payload) {
+    if (!path.endsWith("/v1/chat/completions") && !path.endsWith("/v1/chat/completions/ws")) {
+        return "";
+    }
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        return "";
+    }
+    const agentID = payload.agent_id;
+    return typeof agentID === "string" ? agentID.trim() : "";
 }
 function requestFailureError(method, url, err) {
     const message = err instanceof Error ? err.message : String(err);

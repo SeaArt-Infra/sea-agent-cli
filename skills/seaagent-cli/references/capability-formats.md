@@ -593,6 +593,7 @@ For a rejection, `approved` must be boolean `false`; optional `code` and `messag
 ```
 
 - Positional `<agent-id>` sets `agent_id`.
+- When `agent_id` is present, the CLI sends the same value in `X-Agent-ID` and the JSON body; the gateway gives the header priority during the compatibility rollout.
 - `--model` temporarily sets `model` for this chat request.
 - `--reasoning-effort` temporarily sets the platform unified `reasoning_effort` for this chat request. Its accepted values are `off`, `on`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, and `ultra`. Neither option changes the saved Agent configuration.
 - `--agent-config-file` sets `agent_config` and allows running with inline runtime config instead of an agent id.

@@ -264,6 +264,8 @@ seaagent chat cancel <chat-id>
 
 `--reasoning-effort` temporarily sends the platform unified `reasoning_effort` value without changing the saved Agent default. Supported values are `off`, `on`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, and `ultra`; it can be combined with `--model` for one chat run.
 
+When a chat payload has `agent_id`, the CLI sends the same value in `X-Agent-ID` and the JSON body; the gateway gives the header priority during the compatibility rollout.
+
 `--messages-file` accepts a JSON/YAML messages array, or an object containing a full `ChatCompletionRequest` payload. Object payloads may include fields such as `agent_id`, `skill_ids`, `model`, `reasoning_effort`, `stream`, and `metadata.session_id` / `metadata.user_id`; positional `<agent-id>`, `--skill-id`, `--model`, `--reasoning-effort`, and `--agent-config-file` override the same fields from the file. `skill_ids` temporarily mounts extra Skills for an `agent_id` run when the Agent needs one-off capabilities without changing its saved config; IDs must be active, visible Skill UUIDs, are capped at 20, are merged after the Agent's own Skills, and cannot be used with `agent_config` / `--agent-config-file`. Skill runtime config only fills Agent defaults that are unset. SDK field names for the same option are Go `SkillIDs`, JS `skillIds`, and Python `skill_ids`. Use it for OpenAI-style multimodal content parts such as text plus `image_url` / `video_url`.
 
 Streaming chat renders assistant text to stdout. It prints the chat `run_id` to stderr when known, and prints terminal `usage` plus `langfuse_trace_id` to stderr when the final event includes that metadata.
