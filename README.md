@@ -8,7 +8,7 @@
 
 | Workflow | Commands | What it does |
 | --- | --- | --- |
-| Self maintenance | `seaagent self ...` | Check CLI updates, update the CLI, verify local support files, and install the bundled Codex skill |
+| Self maintenance | `seaagent self ...` | Check CLI updates, update the CLI and bundled Codex skill together, or manage the skill separately |
 | Configuration | `seaagent config ...` | Store endpoint, API key, and production-line user ID in `~/.seaagent/config.yaml` |
 | System and catalog | `seaagent system ...`, `seaagent catalog ...` | Check gateway health, metrics, and reusable capabilities |
 | Tools | `seaagent tool ...` | Register, list, inspect, resolve, update, and delete executable tools |
@@ -34,7 +34,7 @@
 Install from GitHub:
 
 ```bash
-npm install -g git+https://github.com/SeaArt-Infra/sea-agent-cli.git
+npm install -g git+https://github.com/SeaArt-Infra/sea-agent-cli.git#sync-github-main
 ```
 
 For local development:
@@ -90,7 +90,7 @@ Set `SEAAGENT_DEBUG=1` to print HTTP and WebSocket requests:
 SEAAGENT_DEBUG=1 seaagent system health
 ```
 
-The CLI checks GitHub for package updates at most once per day and checks the bundled `seaagent-cli` Codex skill against `~/.codex/skills/seaagent-cli` at most every 2 hours. Notices are printed to stderr only.
+The CLI checks GitHub for package updates at most once per day and checks the bundled `seaagent-cli` Codex skill against `~/.codex/skills/seaagent-cli` at most every 2 hours. Notices are printed to stderr only. `seaagent self update` refreshes the CLI package and then installs its bundled skill; use `seaagent self update-skill` when only the local skill needs updating.
 
 ```bash
 seaagent self check-update
