@@ -142,6 +142,10 @@ seaagent agent capabilities <agent-id>
 seaagent chat run --no-stream <agent-id> "In one sentence, explain what you can do without calling any tools."
 ```
 
+This creates a chat run and event record, but does not mutate registry
+resources or require registry-mutation approval. Keep this smoke-test prompt
+tool-free so it cannot trigger an external operation.
+
 ## Update Flow
 
 1. Require the exact Agent UUID.

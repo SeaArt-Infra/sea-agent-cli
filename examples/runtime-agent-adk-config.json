@@ -1,0 +1,15 @@
+{
+  "agent": {
+    "id": "inline_adk_agent",
+    "name": "inline_adk_agent",
+    "category": "adk",
+    "model": "gpt-5.5",
+    "temperature": 0.2,
+    "max_turns": 20,
+    "timeout": 600,
+    "system_prompt": "You are a concise assistant running on the ADK worker.",
+    "tools": [],
+    "skills": [],
+    "config": {}
+  }
+}
