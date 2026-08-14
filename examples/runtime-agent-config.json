@@ -2,7 +2,6 @@
   "agent": {
     "id": "inline_web_agent",
     "name": "inline_web_agent",
-    "category": "fabric",
     "model": "gpt-4o",
     "temperature": 0.2,
     "max_turns": 20,

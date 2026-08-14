@@ -14,13 +14,12 @@ Use immutable agent UUIDs returned by the gateway for update/capabilities/chat.
 Agent categories:
   fabric    Normal Fabric scheduler pool
   seaactor  SeaActor scheduler pool
-  adk       ADK scheduler pool
 
 Common list filters:
   --search <value>      Match agent names and metadata
   --status <value>      draft | active | deprecated | disabled | deleted
   --owner-id <value>    Owner/production-line ID
-  --category <value>    fabric | seaactor | adk
+  --category <value>    fabric | seaactor
   --limit <number>      Page size
   --offset <number>     Page offset
 
@@ -48,7 +47,7 @@ Examples:
   seaagent agent register -f examples/agent-sandbox.json
 
 Payload notes:
-  - category is required by current gateway deployments: fabric, seaactor, or adk.
+  - category is required by current gateway deployments: fabric or seaactor.
   - Do not send agent_key for new registrations; gateway returns an immutable UUID.
   - skills is the complete Skill UUID array. Add only high-probability, decision-critical Skill UUIDs to pre_skills.
   - pre_skills must be a subset of skills. Gateway preloads those instructions into the Agent prompt and avoids their Worker SKILL.md reads, but adds prompt tokens on every run. Keep conditional, occasional, long, or uncertain Skills out of pre_skills.
@@ -140,7 +139,7 @@ agent owner to delete the agent.`)
         .option("--search <value>", "search text")
         .option("--status <value>", "draft, active, deprecated, disabled, or deleted")
         .option("--owner-id <value>", "owner ID")
-        .option("--category <fabric|seaactor|adk>", "scheduler category")
+        .option("--category <fabric|seaactor>", "scheduler category")
         .option("--limit <number>", "page size", "20")
         .option("--offset <number>", "page offset", "0")
         .addHelpText("after", `

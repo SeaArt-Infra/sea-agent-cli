@@ -8,8 +8,6 @@ export function chatCommand() {
     const cmd = addHelpText(new Command("chat").description("Run and manage chats"), `
 Chat can run against a registered agent UUID or an inline runtime agent_config file.
 Streaming is enabled by default. Use --no-stream when another agent needs raw JSON.
-Each chat run creates a run record but does not mutate the Tool, Skill, or Agent registry.
-Inline agent configs must set category under agent: fabric, seaactor, or adk.
 
 Examples:
   seaagent chat run <agent-id> "hello"
@@ -19,7 +17,6 @@ Examples:
   seaagent chat run --ws <agent-id> "stream over WebSocket"
   seaagent chat run --skill-id <skill-id> <agent-id> "run with an extra skill"
   seaagent chat run --agent-config-file examples/runtime-agent-config.json "Fetch https://example.com"
-  seaagent chat run --agent-config-file examples/runtime-agent-adk-config.json "Hello from ADK"
   seaagent chat run --messages-file examples/chat-multimodal.json <agent-id>
   seaagent chat events <chat-id> --after-seq 12
   seaagent chat stream <chat-id> --after-seq 12
@@ -49,16 +46,13 @@ Examples:
   seaagent chat run --skill-id 11111111-1111-1111-1111-111111111111 <agent-id> "Use the extra skill"
   seaagent chat run --stream-retries 5 <agent-id> "Reconnect at most five times"
   seaagent chat run --agent-config-file examples/runtime-agent-config.json "Fetch https://example.com"
-  seaagent chat run --agent-config-file examples/runtime-agent-adk-config.json "Hello from ADK"
   seaagent chat run --messages-file examples/chat-multimodal.json <agent-id>
 
 Notes:
   - Either [agent-id] or --agent-config-file is required.
-  - An inline agent_config must set category at its top level or under agent; use fabric, seaactor, or adk. The bundled examples use agent.category.
   - --skill-id can be repeated and sends skill_ids with agent_id for one-off extra Skills; IDs must be active visible UUIDs, capped at 20, and cannot be used with --agent-config-file or payload agent_config.
   - --messages-file accepts a messages array, or an object containing a full ChatCompletionRequest payload.
   - --reasoning-effort applies only to this chat request and does not change the saved Agent configuration.
-  - chat run creates a chat run and event record, but is not a Tool, Skill, or Agent registry mutation and needs no registry confirmation.
   - With streaming enabled, stdout contains assistant text; stderr contains run_id, progress, tool status, terminal usage, and langfuse_trace_id when available.
   - With --no-stream, stdout is gateway JSON enriched with response.message.content and response.metadata.langfuse_trace_id when stored events are available.`)
         .action(async function (agentID, messageParts, options) {
