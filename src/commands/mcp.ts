@@ -18,6 +18,8 @@ export function mcpCommand(dependencies: McpCommandDependencies = {}): Command {
 MCP servers are independently registered runtime connections for Skills.
 Use immutable MCP server UUIDs returned by the gateway for get/update/delete,
 tools/call, and Skill config.mcp_servers bindings.
+The tools/call commands are legacy REST compatibility shells. New MCP
+integrations should use a standard MCP client against /v1/mcps/<mcp-server-id>/mcp.
 
 ${commonListHelp}
 
@@ -27,8 +29,8 @@ Examples:
   seaagent mcp list --status active
   seaagent mcp register -f examples/mcp-streamable-http.json
   seaagent mcp get <mcp-server-id>
-  seaagent mcp tools <mcp-server-id>
-  seaagent mcp call <mcp-server-id> -f payloads/mcp-call.json
+  seaagent mcp tools <mcp-server-id>  # legacy REST diagnostic
+  seaagent mcp call <mcp-server-id> -f payloads/mcp-call.json  # legacy REST diagnostic
 `);
 
   cmd
@@ -147,7 +149,7 @@ MCP server provider to delete the server.`)
 
   cmd
     .command("tools")
-    .description("List tools discovered from an MCP server")
+    .description("List tools through the legacy REST compatibility route")
     .argument("<mcp-server-id>", "MCP server UUID")
     .action(async (mcpID: string) => {
       const client = await createClient();
@@ -156,7 +158,7 @@ MCP server provider to delete the server.`)
 
   cmd
     .command("call")
-    .description("Call an MCP server tool via /v1/mcps/{mcp-server-id}/call")
+    .description("Call an MCP server tool through the legacy REST compatibility route")
     .argument("<mcp-server-id>", "MCP server UUID")
     .requiredOption("-f, --file <path>", "JSON/YAML body containing name, arguments, and optional timeout_ms")
     .addHelpText("after", `
@@ -164,7 +166,9 @@ MCP server provider to delete the server.`)
 Example:
   seaagent mcp call <mcp-server-id> -f payloads/mcp-call.json
 
-Tool calls can have external side effects, so the CLI requires confirmation.`)
+Tool calls can have external side effects, so the CLI requires confirmation.
+This REST shell is deprecated. New integrations should use a standard MCP
+client against /v1/mcps/<mcp-server-id>/mcp.`)
     .action(async (mcpID: string, options: { file: string }) => {
       const client = await createClient();
       const payload = await readPayload(options.file);
