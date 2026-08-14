@@ -9,6 +9,8 @@
   "files": [
     "dist",
     "skills/seaagent-cli",
+    "examples",
+    "docs",
     "README.md"
   ],
   "scripts": {

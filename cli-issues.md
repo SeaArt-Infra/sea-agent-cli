@@ -121,7 +121,9 @@ Add at least one workflow that reuses an existing Skill to create an Agent. Weat
 
 **Status**
 
-`partially fixed`: `agent register --help` now includes a minimal payload and a hint about reusing Skill UUIDs. A task-oriented README workflow is still recommended.
+`fixed`: README now includes a task-oriented flow that searches active Skills,
+binds the returned Skill UUID in an Agent payload, verifies capabilities, and
+runs a no-tool smoke test.
 
 ### 4. Top-level `agent --help` does not show common list filters
 
@@ -208,7 +210,9 @@ Chat run creates a run record, but it is not a registry mutation. It can be used
 
 **Status**
 
-`todo`
+`fixed`: README, the response protocol, and the bundled `seaagent-cli` Skill
+now state that `chat run` creates a run record but is not a registry mutation,
+so it is valid as a smoke test.
 
 ## Fixed / Mitigated
 
