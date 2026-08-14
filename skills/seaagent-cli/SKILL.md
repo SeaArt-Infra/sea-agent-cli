@@ -121,11 +121,13 @@ seaagent config path
 Self maintenance:
 
 ```bash
+seaagent self check-update
+seaagent self update
 seaagent self check
 seaagent self update-skill
 ```
 
-The CLI compares its bundled `seaagent-cli` skill with `~/.codex/skills/seaagent-cli` at most every 2 hours and prints update notices to stderr. Use `self update-skill` for an explicit local skill update.
+The CLI compares its bundled `seaagent-cli` skill with `~/.codex/skills/seaagent-cli` at most every 2 hours and prints update notices to stderr. `self update` refreshes the CLI package and then installs the bundled skill; use `self update-skill` for an explicit local skill-only update.
 
 Catalog:
 
