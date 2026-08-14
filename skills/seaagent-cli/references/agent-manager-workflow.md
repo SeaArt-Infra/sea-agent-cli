@@ -31,7 +31,7 @@ Clarify the minimum Agent behavior before writing payloads:
 - Target `owner_id` or production-line identity.
 - User inputs and expected outputs.
 - Usage scenario and success criteria.
-- Desired category: `fabric` by default, `seaactor` only when explicitly needed.
+- Desired category: `fabric` by default, `seaactor` only for the SeaActor pool, or `adk` only for the ADK worker pool.
 - Any model policy, runtime config, hooks, or sandbox requirements.
 
 Do not ask users to fill Tool or Skill payload fields when the task is only an
@@ -96,7 +96,7 @@ Rules:
 
 - Preserve an existing Agent name during update unless the user asks to rename it.
 - For new names, use a stable lowercase slug and do not append UUIDs, timestamps, version text, or random suffixes.
-- `category` must be `fabric` or `seaactor`.
+- `category` must be `fabric`, `seaactor`, or `adk`.
 - `skills` contains only Skill UUIDs, never Tool refs. `pre_skills` is an optional duplicate-free subset of `skills`.
 - Add a Skill to both `skills` and `pre_skills` only when it is expected in most runs and the model needs its full instruction before deciding what to do. Gateway preloads it into the resolved system prompt and removes its Worker `SKILL.md` read, but adds system-prompt tokens on every run. Keep conditional, occasional, long, or low-confidence Skills only in `skills` so Worker loads them progressively; do not preload a Skill merely because it is short.
 - Omit `agent_config` for new Agents unless runtime settings are needed; preserve existing `agent_config` during updates unless the user changes it.

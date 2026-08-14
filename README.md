@@ -214,7 +214,7 @@ Skill notes:
 
 Agent notes:
 
-- `category` should be `fabric` or `seaactor`.
+- `category` must be `fabric`, `seaactor`, or `adk`; it selects the corresponding scheduler pool.
 - Do not send `agent_key` for new registrations; the gateway returns an immutable UUID.
 - Use `agent capabilities <agent-id>` after agent or skill changes to verify resolved bindings.
 

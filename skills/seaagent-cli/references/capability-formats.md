@@ -104,7 +104,7 @@ List pagination:
 
 Resource and runtime enums:
 
-- Agent `category`: `fabric`, `seaactor`. This is a gateway Scheduler resource class, not a display category.
+- Agent `category`: `fabric`, `seaactor`, `adk`. This is a gateway Scheduler resource class, not a display category.
 - Skill `metadata` is reserved by the gateway and stored as `{}`; do not put migration notes, display data, or runtime config in `skills.metadata`.
 - Tool `runtime_type`: `http`, `builtin`, `mcp`. Concise payloads still accept old `transport` compatibility values and convert them into `runtime_type`.
 - MCP Server `transport`: `streamable-http` or `sse`. Skill runtime bindings require an unauthenticated `streamable-http` endpoint. The Server `public` field controls cross-production-line sharing, not endpoint authentication.
@@ -384,7 +384,7 @@ seaagent agent register -f <payload.json>
 Rules:
 
 - `name`, `category`, and `owner_id` are required after defaults on current gateway deployments.
-- `category` is required because it maps gateway runs to Scheduler resource pools. Allowed values are `fabric` and `seaactor`; use `fabric` for standard runnable agents and `seaactor` only when that scheduler class is explicitly required.
+- `category` is required because it maps gateway runs to Scheduler resource pools. Allowed values are `fabric`, `seaactor`, and `adk`; use `fabric` for standard runnable agents, `seaactor` only when that scheduler class is explicitly required, and `adk` only for the ADK worker pool.
 - `owner_id` defaults to `internal`; gateway returns a UUID `id` and response `version` starting at `v1`.
 - Do not send removed `agent_key` fields for new concise agent registrations. Reject or normalize names like `react_game_generator_agent_013919`; use canonical `name: "react_game_generator_agent"` plus an intentional `owner_id`.
 - `model` and `config` default to `{}`. Agent `metadata` is ignored and stored as `{}`; use `config` for runtime settings.
@@ -439,13 +439,13 @@ Use with `agent register` to create if the payload includes low-level trigger fi
 }
 ```
 
-Agent `metadata` is stored as `{}`. Every skill ref must resolve to active Skill current state. Low-level `status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`; an Agent must be `active` to run through chat. `category` must remain `fabric` or `seaactor`.
+Agent `metadata` is stored as `{}`. Every skill ref must resolve to active Skill current state. Low-level `status` accepts `draft`, `active`, `deprecated`, `disabled`, or `deleted`; an Agent must be `active` to run through chat. `category` must remain `fabric`, `seaactor`, or `adk`.
 
 Gateway normalizes `model_config.default` and `model_config.allowed` by removing provider or routing prefixes before storage. For example, `vertex_ai/gemini-3-flash-preview`, `openai/gpt-4o`, and `gpt/gpt-4.1-mini` are stored as `gemini-3-flash-preview`, `gpt-4o`, and `gpt-4.1-mini`.
 
 `model.reasoning_effort` / `model_config.reasoning_effort` is optional. Supported values are `off`, `on`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, and `ultra`; the gateway forwards it to the Agent Worker as `agent.reasoning_effort`.
 
-Use the low-level update shape to fix runnable-agent issues after registration. If a no-tool chat smoke test returns a proxy timeout, first verify/update `category: "fabric"` and a known-good `model_config` before investigating tool behavior.
+Use the low-level update shape to fix runnable-agent issues after registration. If a Fabric Agent's no-tool chat smoke test returns a proxy timeout, first verify/update `category: "fabric"` and a known-good `model_config` before investigating tool behavior. Preserve a known `seaactor` or `adk` category while diagnosing its worker pool.
 
 To mark a low-level agent as a sandbox agent, add `agent_config.runtime.sandbox`. If this object is absent, the agent is treated as a normal non-sandbox agent.
 
