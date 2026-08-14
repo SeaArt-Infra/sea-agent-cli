@@ -20,7 +20,7 @@ This does not cover a Tool's own `response_mode` protocol. `response_mode` descr
 ```json
 {
   "request_id": "optional-request-id",
-  "agent_id": "11111111-1111-4111-8111-111111111111",
+  "agent_id": "owner_id:agent_name:v1",
   "skill_ids": ["11111111-1111-1111-1111-111111111111"],
   "category": "fabric",
   "messages": [
@@ -36,12 +36,12 @@ This does not cover a Tool's own `response_mode` protocol. `response_mode` descr
 
 Field notes:
 
-- `agent_id`: use the immutable UUID returned when the Agent is registered. Some gateway deployments still accept a legacy Agent key, but new CLI workflows must use the UUID.
-- `agent_config`: inline runtime Agent config. It cannot be used together with `agent_id`; it must set `category` at the config root or in `agent.category`.
+- `agent_id`: registered Agent ID or key.
+- `agent_config`: inline runtime Agent config. It cannot be used together with `agent_id`.
 - `skill_ids`: optional temporary Skill UUIDs for this chat run, used when a registered Agent needs one-off extra capabilities without changing its saved configuration. Use only with `agent_id`; `agent_config + skill_ids` is rejected. Gateway accepts at most 20 IDs, requires each Skill to be active and visible to the caller, merges them after the registered Agent's own Skills, dedupes repeated IDs, and only lets Skill runtime config fill Agent defaults that are unset.
 - `messages`: conversation message array.
 - `stream`: whether to return a streaming response. The CLI treats requests as streaming by default.
-- `category`: scheduling category. Current valid values are `fabric`, `seaactor`, and `adk`. On a registered-Agent chat request, an explicit value overrides the stored category; omit it for normal runs. An inline Agent has no stored category, so it must provide one in the inline config or the request.
+- `category`: scheduling category. Current valid values are `fabric`, `seaactor`, and `adk`. On a chat request, an explicit value overrides the registered Agent category; omit it to use the Agent's stored category.
 - `metadata`: pass-through context such as `session_id`, `user_id`, and `api_key`.
 
 `messages[].content` supports either an OpenAI-style string or an array of multimodal content parts:
@@ -216,10 +216,6 @@ When the CLI receives `event: "error"`, it throws an error. Other events are ren
 `GET /v1/chats/{chat-id}/ws?after_seq=...` replays historical events in WebSocket JSON message format.
 
 ## CLI Behavior
-
-Every `seaagent chat run` creates a Chat run and stored event record. It does
-not register, update, or delete a Tool, Skill, or Agent, so it is appropriate
-for smoke tests without registry-mutation confirmation.
 
 `seaagent chat run` streams by default:
 

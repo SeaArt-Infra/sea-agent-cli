@@ -35,8 +35,7 @@ Discovery and runtime endpoints:
 
 - `catalog list` -> `GET /v1/catalog`
 - `tool list/get/resolve` -> `GET /v1/tools`, `GET /v1/tools/{id}`, `GET /v1/tools/{id}/resolve`
-- `mcp list/get` -> `GET /v1/mcps`, `GET /v1/mcps/{id}`
-- legacy `mcp tools/call` -> `GET /v1/mcps/{id}/tools`, `POST /v1/mcps/{id}/call`; use the standard MCP proxy at `/v1/mcps/{id}/mcp` for new integrations
+- `mcp list/get/tools/call` -> `GET /v1/mcps`, `GET /v1/mcps/{id}`, `GET /v1/mcps/{id}/tools`, `POST /v1/mcps/{id}/call`
 - `skill list/get` -> `GET /v1/skills`, `GET /v1/skills/{id}`
 - `agent list/get/capabilities` -> `GET /v1/agents`, `GET /v1/agents/{id}`, `GET /v1/agents/{id}/capabilities`
 - `agent memory list/export/candidates/facts list` -> `GET /v1/agents/{id}/memory/...`
@@ -88,7 +87,6 @@ Stable identifiers:
 - Skill resource id: gateway-generated UUID.
 - Skill registry refs use the gateway UUID. `skills.manifest` no longer stores duplicate `id`, `name`, `provider`, or display fields.
 - Agent resource id: gateway-generated UUID.
-- Use the returned Agent UUID in CLI chat commands. A legacy Agent key can remain accepted by some gateway deployments, but is not the identifier for new CLI workflows.
 - Names should be stable `snake_case`.
 - Registry identity is always the gateway UUID. Do not send removed `tool_key`, `skill_key`, `agent_key`, or request-owned `version` fields; keep `provider` and `name` canonical for display/runtime metadata. Do not keep recovery/import suffixes such as `_restored`, `_backup`, `_copy`, timestamps, or random migration markers in `id` or `name`.
 
@@ -155,8 +153,7 @@ Rules:
 - `public` controls whether other production lines can see and invoke the registered Server. Keep it `false` unless cross-production-line sharing is intended.
 - To bind a Server to a Skill, use only its returned UUID in `config.mcp_servers`. Never place `server_url` or an MCP Server UUID in `required_tools`.
 - Gateway validates that each bound UUID is active and visible. Skill runtime bindings require an unauthenticated Streamable HTTP endpoint; the registered Server may remain private to its owner.
-- `mcp tools` and `mcp call` are deprecated REST compatibility commands. A standard MCP client should connect to `/v1/mcps/<mcp-server-id>/mcp` for new integrations. The CLI has no general MCP client command.
-- Legacy `mcp call` accepts `{ "name": "<tool-name>", "arguments": {}, "timeout_ms": 0 }`; timeout must be between 0 and 120000 milliseconds.
+- `mcp call` accepts `{ "name": "<tool-name>", "arguments": {}, "timeout_ms": 0 }`; timeout must be between 0 and 120000 milliseconds.
 
 ## Tool Concise Register
 
@@ -585,9 +582,8 @@ For a rejection, `approved` must be boolean `false`; optional `code` and `messag
 
 ```json
 {
-  "agent_id": "11111111-1111-4111-8111-111111111111",
+  "agent_id": "owner_id:agent_name:v1",
   "skill_ids": ["11111111-1111-1111-1111-111111111111"],
-  "category": "fabric",
   "model": "gpt-5.5",
   "reasoning_effort": "high",
   "messages": [{"role": "user", "content": "hello"}],
@@ -596,17 +592,16 @@ For a rejection, `approved` must be boolean `false`; optional `code` and `messag
 }
 ```
 
-- Positional `<agent-id>` sets `agent_id`; use the immutable registered Agent UUID.
+- Positional `<agent-id>` sets `agent_id`.
 - `--model` temporarily sets `model` for this chat request.
 - `--reasoning-effort` temporarily sets the platform unified `reasoning_effort` for this chat request. Its accepted values are `off`, `on`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, and `ultra`. Neither option changes the saved Agent configuration.
-- `--agent-config-file` sets `agent_config` and allows running with inline runtime config instead of an agent id. Inline config must set `category` at its root or in `agent.category`; use `fabric`, `seaactor`, or `adk`.
+- `--agent-config-file` sets `agent_config` and allows running with inline runtime config instead of an agent id.
 - `--skill-id` sets `skill_ids`, temporarily mounting extra Skills for one chat run without changing the registered Agent. `skill_ids` can only be used with `agent_id`; `agent_config + skill_ids` is rejected by Agent Gateway. Values must be active, visible Skill UUIDs, are capped at 20, merge after the registered Agent's own Skills, dedupe repeated IDs, and only fill Agent runtime defaults when the Agent has not set them.
-- `--messages-file` sets `messages` from a JSON/YAML array or merges an object containing a full `ChatCompletionRequest` payload, including `category`, `model`, `reasoning_effort`, `metadata.session_id` / `metadata.user_id`, and OpenAI-style multimodal content parts such as `{"type":"text","text":"Describe this image"}` and `{"type":"image_url","image_url":{"url":"https://..."}}`. Positional `<agent-id>`, `--model`, and `--reasoning-effort` override their corresponding payload-file fields. A request `category` overrides a registered Agent's stored category for that run. SDK field names for `skill_ids` are Go `SkillIDs`, JS `skillIds`, and Python `skill_ids`.
+- `--messages-file` sets `messages` from a JSON/YAML array or merges an object containing a full `ChatCompletionRequest` payload, including `model`, `reasoning_effort`, `metadata.session_id` / `metadata.user_id`, and OpenAI-style multimodal content parts such as `{"type":"text","text":"Describe this image"}` and `{"type":"image_url","image_url":{"url":"https://..."}}`. Positional `<agent-id>`, `--model`, and `--reasoning-effort` override their corresponding payload-file fields. SDK field names for `skill_ids` are Go `SkillIDs`, JS `skillIds`, and Python `skill_ids`.
 - `--no-stream` sets `stream: false`; when stored events are available, CLI enriches the JSON response with `response.message.content`.
 - `--ws` keeps streaming enabled and uses `GET /v1/chat/completions/ws`; the CLI sends the `ChatCompletionRequest` JSON as the first WebSocket message.
 - `chat stream --ws <chat-id>` uses `GET /v1/chats/{chat-id}/ws?after_seq=...` to replay an existing run over WebSocket.
 - For sandbox agents, chat streams can include `chat.sandbox.creating`, `chat.sandbox.ready`, and `chat.sandbox.failed`. The `sandbox_run_id` / `game_run_id` from those events is the run id for `/v1/sandbox/runs/{runID}` APIs; `/v1/game/runs/{runID}` remains a legacy route.
-- Every `chat run` creates a chat run and event record, but does not mutate the Tool, Skill, or Agent registry. It is suitable for a tool-free smoke test without registry confirmation.
 
 ## Verification
 
