@@ -41,7 +41,7 @@ Field notes:
 - `skill_ids`: optional temporary Skill UUIDs for this chat run, used when a registered Agent needs one-off extra capabilities without changing its saved configuration. Use only with `agent_id`; `agent_config + skill_ids` is rejected. Gateway accepts at most 20 IDs, requires each Skill to be active and visible to the caller, merges them after the registered Agent's own Skills, dedupes repeated IDs, and only lets Skill runtime config fill Agent defaults that are unset.
 - `messages`: conversation message array.
 - `stream`: whether to return a streaming response. The CLI treats requests as streaming by default.
-- `category`: scheduling category. Current valid values are `fabric` and `seaactor`.
+- `category`: scheduling category. Current valid values are `fabric`, `seaactor`, and `adk`. On a chat request, an explicit value overrides the registered Agent category; omit it to use the Agent's stored category.
 - `metadata`: pass-through context such as `session_id`, `user_id`, and `api_key`.
 
 `messages[].content` supports either an OpenAI-style string or an array of multimodal content parts:
