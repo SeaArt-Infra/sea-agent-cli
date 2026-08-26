@@ -12,6 +12,7 @@
   "agent_config": {
     "temperature": 0.2,
     "max_turns": 20,
+    "max_output_tokens": 2048,
     "timeout": 600
   },
   "skills": [

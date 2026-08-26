@@ -121,11 +121,13 @@ seaagent config path
 Self maintenance:
 
 ```bash
+seaagent self check-update
+seaagent self update
 seaagent self check
 seaagent self update-skill
 ```
 
-The CLI compares its bundled `seaagent-cli` skill with `~/.codex/skills/seaagent-cli` at most every 2 hours and prints update notices to stderr. Use `self update-skill` for an explicit local skill update.
+The CLI compares its bundled `seaagent-cli` skill with `~/.codex/skills/seaagent-cli` at most every 2 hours and prints update notices to stderr. `self update` refreshes the CLI package and then installs the bundled skill; use `self update-skill` for an explicit local skill-only update.
 
 Catalog:
 
@@ -360,6 +362,8 @@ On the current SeaArt gateway, agent `category` is constrained to `fabric` or `s
 ```
 
 `reasoning_effort` is optional. Set an Agent default with `seaagent agent update <agent-id> --reasoning-effort <value>`. Supported values are `off`, `on`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, and `ultra`; the gateway forwards it to the Agent Worker as `agent.reasoning_effort`.
+
+Set an Agent's optional per-LLM-call output ceiling with `seaagent agent update <agent-id> --max-output-tokens <positive-integer>`, or add `max_output_tokens` to concise `config` / low-level `agent_config`. Omit it to preserve the upstream model default; it is independent from `max_turns`.
 
 If a newly registered agent times out even on the no-tool smoke test, update it with the low-level `agent update` shape and set `category: "fabric"` plus the model config above, then retest before debugging tools.
 
