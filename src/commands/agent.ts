@@ -130,7 +130,7 @@ saved fields, read the current Agent, and preserve its other configuration.`)
 Example:
   seaagent agent delete <agent-id>
 
-Delete uses the configured user-id as X-User-ID. The gateway only allows the
+Delete is restricted by the gateway. The gateway only allows the
 agent owner to delete the agent.`)
     .action(async (agentID: string) => {
       const client = await AgentGatewayClient.fromConfig();

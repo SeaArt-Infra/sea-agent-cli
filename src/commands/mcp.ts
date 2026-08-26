@@ -134,7 +134,7 @@ Example:
 Example:
   seaagent mcp delete <mcp-server-id>
 
-Delete uses the configured user-id as X-User-ID. The gateway only allows the
+Delete is restricted by the gateway. The gateway only allows the
 MCP server provider to delete the server.`)
     .action(async (mcpID: string) => {
       const client = await createClient();

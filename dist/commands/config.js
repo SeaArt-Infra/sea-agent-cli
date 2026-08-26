@@ -10,7 +10,6 @@ Config file:
 Supported keys:
   endpoint   Gateway base URL or URL with /agent-v2, for example http://127.0.0.1:8080
   api-key    Sent as Authorization: Bearer <api-key>
-  user-id    Sent as X-User-ID for ownership-sensitive registry operations
 
 Endpoint compatibility:
   If endpoint does not include /agent-v2, requests automatically use /agent-v2.
@@ -19,14 +18,13 @@ Examples:
   seaagent config set endpoint http://127.0.0.1:8080
   seaagent config set endpoint http://127.0.0.1:8080/agent-v2
   seaagent config set api-key sa-xxxxxxxx
-  seaagent config set user-id production-line-123
   seaagent config get
   seaagent config path
 `);
     cmd
         .command("set")
         .description("Set one config value in ~/.seaagent/config.yaml")
-        .argument("<key>", "endpoint, api-key, or user-id")
+        .argument("<key>", "endpoint or api-key")
         .argument("<value>", "value to store")
         .action(async (key, value) => {
         const config = await loadConfig();
@@ -36,11 +34,8 @@ Examples:
         else if (key === "api-key") {
             config.apiKey = value;
         }
-        else if (key === "user-id") {
-            config.userId = value;
-        }
         else {
-            throw new Error("supported keys: endpoint, api-key, user-id");
+            throw new Error("supported keys: endpoint, api-key");
         }
         await saveConfig(config);
         console.log(`saved ${key} to ${getConfigPath()}`);
@@ -50,8 +45,6 @@ Examples:
         printJSON({
             endpoint: config.endpoint ?? null,
             apiKey: config.apiKey ? maskSecret(config.apiKey) : null,
-            userId: config.userId ?? null,
-            warnings: config.userId ? [] : ["user-id is not configured; registry register/update commands may use gateway defaults for ownership."],
         });
     });
     cmd.command("path").description("Print the config file path").action(() => {

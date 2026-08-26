@@ -24,8 +24,8 @@
 
 1. `seaagent` reads connection settings from `~/.seaagent/config.yaml`.
 2. `endpoint` may be the gateway base URL or a URL that already includes `/agent-v2`; the CLI appends `/agent-v2` when needed.
-3. Requests send `Authorization: Bearer <api-key>` and `X-User-ID: <user-id>` when configured.
-4. Registry writes use `user-id` for owner/operator-sensitive gateway behavior.
+3. Requests send `Authorization: Bearer <api-key>` when configured.
+4. Registry writes derive owner/operator identity from the API key.
 5. Chat defaults to SSE streaming, creates a chat run/event record, can switch to WebSocket with `--ws`, and can replay stored events by chat ID. It is not a Tool, Skill, or Agent registry mutation.
 6. Sandbox commands manage remote workspace runs created directly or by agents with `runtime.sandbox`.
 
@@ -50,7 +50,6 @@ Configure a gateway and check connectivity:
 ```bash
 seaagent config set endpoint http://127.0.0.1:8080
 seaagent config set api-key sa-xxxxxxxx
-seaagent config set user-id production-line-123
 seaagent config get
 seaagent system health
 ```
@@ -72,7 +71,6 @@ The CLI stores config in `~/.seaagent/config.yaml`:
 ```bash
 seaagent config set endpoint http://127.0.0.1:8080
 seaagent config set api-key sa-xxxxxxxx
-seaagent config set user-id production-line-123
 seaagent config get
 seaagent config path
 ```
@@ -81,7 +79,6 @@ Credentials are sent as:
 
 ```http
 Authorization: Bearer sa-xxxxxxxx
-X-User-ID: production-line-123
 ```
 
 Set `SEAAGENT_DEBUG=1` to print HTTP and WebSocket requests:
@@ -377,7 +374,7 @@ seaagent sandbox delete <sandbox-run-id>
 | Area | Commands |
 | --- | --- |
 | Self | `check-update`, `update`, `check`, `update-skill` |
-| Config | `set endpoint`, `set api-key`, `set user-id`, `get`, `path` |
+| Config | `set endpoint`, `set api-key`, `get`, `path` |
 | System | `health`, `metrics` |
 | Catalog | `list` |
 | Tools | `register`, `list`, `find`, `get`, `update`, `resolve`, `delete` |
