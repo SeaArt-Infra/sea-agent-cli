@@ -7,7 +7,6 @@ export class AgentGatewayClient {
   constructor(
     endpoint: string,
     private readonly apiKey?: string,
-    private readonly userId?: string,
   ) {
     this.endpoint = normalizeAgentGatewayEndpoint(endpoint);
   }
@@ -17,7 +16,7 @@ export class AgentGatewayClient {
     if (!config.endpoint) {
       throw new Error("endpoint is not configured. Run: seaagent config set endpoint <url>");
     }
-    return new AgentGatewayClient(config.endpoint, config.apiKey, config.userId);
+    return new AgentGatewayClient(config.endpoint, config.apiKey);
   }
 
   getEndpoint(): string {
@@ -58,9 +57,6 @@ export class AgentGatewayClient {
     const headers: Record<string, string> = {};
     if (this.apiKey) {
       headers.authorization = `Bearer ${this.apiKey}`;
-    }
-    if (this.userId) {
-      headers["X-User-ID"] = this.userId;
     }
     const agentID = chatAgentID(path, initialMessage);
     if (agentID) {
@@ -229,9 +225,6 @@ export class AgentGatewayClient {
     }
     if (this.apiKey) {
       headers.authorization = `Bearer ${this.apiKey}`;
-    }
-    if (this.userId) {
-      headers["X-User-ID"] = this.userId;
     }
     const agentID = chatAgentID(url, body);
     if (agentID) {

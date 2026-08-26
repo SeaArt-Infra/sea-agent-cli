@@ -41,7 +41,6 @@ Configuration:
   Configure endpoint and credentials before calling gateway-backed commands:
     seaagent config set endpoint http://127.0.0.1:8080
     seaagent config set api-key sa-xxxxxxxx
-    seaagent config set user-id production-line-123
 
 Common workflows:
   Check CLI package and local support files:

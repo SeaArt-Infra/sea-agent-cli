@@ -2,11 +2,9 @@ import { request, WebSocket } from "undici";
 import { loadConfig } from "./config-store.js";
 export class AgentGatewayClient {
     apiKey;
-    userId;
     endpoint;
-    constructor(endpoint, apiKey, userId) {
+    constructor(endpoint, apiKey) {
         this.apiKey = apiKey;
-        this.userId = userId;
         this.endpoint = normalizeAgentGatewayEndpoint(endpoint);
     }
     static async fromConfig() {
@@ -14,7 +12,7 @@ export class AgentGatewayClient {
         if (!config.endpoint) {
             throw new Error("endpoint is not configured. Run: seaagent config set endpoint <url>");
         }
-        return new AgentGatewayClient(config.endpoint, config.apiKey, config.userId);
+        return new AgentGatewayClient(config.endpoint, config.apiKey);
     }
     getEndpoint() {
         return this.endpoint;
@@ -46,9 +44,6 @@ export class AgentGatewayClient {
         const headers = {};
         if (this.apiKey) {
             headers.authorization = `Bearer ${this.apiKey}`;
-        }
-        if (this.userId) {
-            headers["X-User-ID"] = this.userId;
         }
         const agentID = chatAgentID(path, initialMessage);
         if (agentID) {
@@ -205,9 +200,6 @@ export class AgentGatewayClient {
         }
         if (this.apiKey) {
             headers.authorization = `Bearer ${this.apiKey}`;
-        }
-        if (this.userId) {
-            headers["X-User-ID"] = this.userId;
         }
         const agentID = chatAgentID(url, body);
         if (agentID) {

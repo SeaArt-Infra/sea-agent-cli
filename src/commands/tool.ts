@@ -149,7 +149,7 @@ metadata that Agent Worker receives.`)
 Example:
   seaagent tool delete <tool-id>
 
-Delete uses the configured user-id as X-User-ID. The gateway only allows the
+Delete is restricted by the gateway. The gateway only allows the
 tool provider to delete the tool.`)
     .action(async (toolID: string) => {
       const client = await AgentGatewayClient.fromConfig();

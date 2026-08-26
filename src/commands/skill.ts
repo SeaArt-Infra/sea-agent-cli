@@ -141,7 +141,7 @@ Example:
 Example:
   seaagent skill delete <skill-id>
 
-Delete uses the configured user-id as X-User-ID. The gateway only allows the
+Delete is restricted by the gateway. The gateway only allows the
 skill provider to delete the skill.`)
     .action(async (skillID: string) => {
       const client = await AgentGatewayClient.fromConfig();
