@@ -363,6 +363,8 @@ On the current SeaArt gateway, agent `category` is constrained to `fabric` or `s
 
 `reasoning_effort` is optional. Set an Agent default with `seaagent agent update <agent-id> --reasoning-effort <value>`. Supported values are `off`, `on`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, and `ultra`; the gateway forwards it to the Agent Worker as `agent.reasoning_effort`.
 
+Set an Agent's optional per-LLM-call output ceiling with `seaagent agent update <agent-id> --max-output-tokens <positive-integer>`, or add `max_output_tokens` to concise `config` / low-level `agent_config`. Omit it to preserve the upstream model default; it is independent from `max_turns`.
+
 If a newly registered agent times out even on the no-tool smoke test, update it with the low-level `agent update` shape and set `category: "fabric"` plus the model config above, then retest before debugging tools.
 
 ### Sandbox Agents

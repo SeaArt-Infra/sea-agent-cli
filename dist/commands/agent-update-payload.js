@@ -1,8 +1,20 @@
 const reasoningEffortValues = ["off", "on", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"];
 export function updatePayloadWithReasoningEffort(response, effort) {
+    return updatePayloadWithRuntimeOverrides(response, { reasoningEffort: effort });
+}
+export function updatePayloadWithMaxOutputTokens(response, maxOutputTokens) {
+    return updatePayloadWithRuntimeOverrides(response, { maxOutputTokens });
+}
+export function updatePayloadWithRuntimeOverrides(response, overrides) {
     const agent = agentFromResponse(response);
     const modelConfig = copyObject(agent.model_config, "model_config");
-    modelConfig.reasoning_effort = normalizeReasoningEffort(effort);
+    const agentConfig = copyObject(agent.agent_config, "agent_config");
+    if (overrides.reasoningEffort !== undefined) {
+        modelConfig.reasoning_effort = normalizeReasoningEffort(overrides.reasoningEffort);
+    }
+    if (overrides.maxOutputTokens !== undefined) {
+        agentConfig.max_output_tokens = normalizeMaxOutputTokens(overrides.maxOutputTokens);
+    }
     return {
         category: requiredString(agent, "category"),
         name: requiredString(agent, "name"),
@@ -11,13 +23,21 @@ export function updatePayloadWithReasoningEffort(response, effort) {
         metadata: {},
         model_config: modelConfig,
         system_prompt: requiredString(agent, "system_prompt", true),
-        agent_config: copyObject(agent.agent_config, "agent_config"),
+        agent_config: agentConfig,
         skills: copyStringArray(agent.skills, "skills"),
         pre_skills: copyStringArray(agent.pre_skills, "pre_skills"),
     };
 }
 export function reasoningEffortHelp() {
     return reasoningEffortValues.join(", ");
+}
+export function normalizeMaxOutputTokens(value) {
+    const normalized = value.trim();
+    const parsed = Number(normalized);
+    if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+        throw new Error("--max-output-tokens must be a positive integer");
+    }
+    return parsed;
 }
 function agentFromResponse(response) {
     const envelope = asObject(response, "agent response");

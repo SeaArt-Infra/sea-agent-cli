@@ -16,9 +16,26 @@ export type AgentUpdatePayload = {
 };
 
 export function updatePayloadWithReasoningEffort(response: unknown, effort: string): AgentUpdatePayload {
+  return updatePayloadWithRuntimeOverrides(response, { reasoningEffort: effort });
+}
+
+export function updatePayloadWithMaxOutputTokens(response: unknown, maxOutputTokens: string): AgentUpdatePayload {
+  return updatePayloadWithRuntimeOverrides(response, { maxOutputTokens });
+}
+
+export function updatePayloadWithRuntimeOverrides(
+  response: unknown,
+  overrides: { reasoningEffort?: string; maxOutputTokens?: string },
+): AgentUpdatePayload {
   const agent = agentFromResponse(response);
   const modelConfig = copyObject(agent.model_config, "model_config");
-  modelConfig.reasoning_effort = normalizeReasoningEffort(effort);
+  const agentConfig = copyObject(agent.agent_config, "agent_config");
+  if (overrides.reasoningEffort !== undefined) {
+    modelConfig.reasoning_effort = normalizeReasoningEffort(overrides.reasoningEffort);
+  }
+  if (overrides.maxOutputTokens !== undefined) {
+    agentConfig.max_output_tokens = normalizeMaxOutputTokens(overrides.maxOutputTokens);
+  }
 
   return {
     category: requiredString(agent, "category"),
@@ -28,7 +45,7 @@ export function updatePayloadWithReasoningEffort(response: unknown, effort: stri
     metadata: {},
     model_config: modelConfig,
     system_prompt: requiredString(agent, "system_prompt", true),
-    agent_config: copyObject(agent.agent_config, "agent_config"),
+    agent_config: agentConfig,
     skills: copyStringArray(agent.skills, "skills"),
     pre_skills: copyStringArray(agent.pre_skills, "pre_skills"),
   };
@@ -36,6 +53,15 @@ export function updatePayloadWithReasoningEffort(response: unknown, effort: stri
 
 export function reasoningEffortHelp(): string {
   return reasoningEffortValues.join(", ");
+}
+
+export function normalizeMaxOutputTokens(value: string): number {
+  const normalized = value.trim();
+  const parsed = Number(normalized);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error("--max-output-tokens must be a positive integer");
+  }
+  return parsed;
 }
 
 function agentFromResponse(response: unknown): Record<string, unknown> {

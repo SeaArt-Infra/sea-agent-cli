@@ -175,7 +175,7 @@ The Agent payload uses the returned UUID, not the Skill name:
   "system_prompt": "Answer weather questions concisely.",
   "skills": ["<active-skill-uuid>"],
   "pre_skills": ["<active-skill-uuid>"],
-  "config": {"temperature": 0.2},
+  "config": {"temperature": 0.2, "max_output_tokens": 2048},
   "enabled": true
 }
 ```
