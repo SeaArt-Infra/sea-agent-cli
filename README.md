@@ -187,8 +187,8 @@ seaagent agent update <agent-id> --reasoning-effort high
 ```
 
 The command reads the current Agent, changes only
-`model_config.reasoning_effort`, preserves its other configuration, and asks
-for confirmation before updating. Supported values are `off`, `on`, `minimal`,
+`model_config.reasoning_effort`, preserves its other configuration, and performs
+the update directly. Supported values are `off`, `on`, `minimal`,
 `low`, `medium`, `high`, `xhigh`, `max`, and `ultra`.
 
 Temporarily override the reasoning effort for one chat without changing the
@@ -216,11 +216,12 @@ Tool notes:
 - Use `tool resolve` before binding a tool into a skill; it shows normalized runtime metadata.
 - `service_name` is a top-level Tool field beside `name`; if omitted, the gateway derives it from the endpoint host.
 - Do not send `inject_user_credentials` in user-facing payloads; the gateway manages it.
+- `tool`, `skill`, `agent`, and `mcp` register/update commands execute directly; delete commands remain confirmation-gated.
 
 MCP server notes:
 
 - Use `mcp list --status active` to find MCP Servers visible to the configured production line.
-- `mcp register`, `mcp update`, `mcp delete`, and `mcp call` require confirmation. Calls may have external side effects.
+- `mcp register` and `mcp update` execute directly. `mcp delete` and `mcp call` require confirmation because they can be destructive or have external side effects.
 - `mcp tools` and `mcp call` are deprecated REST compatibility shells. Use them only for existing diagnostic workflows. New MCP integrations should connect a standard MCP client to `/v1/mcps/<mcp-server-id>/mcp`; the CLI does not implement a general MCP client.
 - For a Skill, use the registered MCP Server UUID, not `server_url`:
 

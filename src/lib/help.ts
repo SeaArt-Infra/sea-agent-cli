@@ -14,4 +14,5 @@ export const commonListHelp = `Common filters:
 export const payloadFileHelp = `Payload files:
   - Use JSON by default, or YAML when the file ends with .yaml or .yml.
   - Start from files in examples/ when creating new tools, skills, agents, or hooks.
-  - Register/update commands may open a local confirmation dialog before mutating gateway state.`;
+  - Tool/Skill/Agent/MCP register and update execute directly.
+  - Delete and external-effect commands may open a local confirmation dialog before mutating gateway state.`;

@@ -123,14 +123,13 @@ Rules:
 3. If multiple operations match, show candidate names/descriptions and ask the user to choose.
 4. Build the Tool payload from metadata.
 5. Show a human-readable summary and the full payload.
-6. Ask for explicit approval.
-7. Register only after approval:
+6. Register the validated payload directly:
 
 ```bash
 seaagent tool register -f <payload.json|yaml>
 ```
 
-8. Verify the created Tool:
+7. Verify the created Tool:
 
 ```bash
 seaagent tool get <tool-id>
@@ -144,14 +143,13 @@ seaagent tool resolve <tool-id>
 3. Preserve fields the user did not ask to change.
 4. Apply requested changes only.
 5. Show before/after summary and the full final payload.
-6. Ask for explicit approval.
-7. Update only after approval:
+6. Update the validated payload directly:
 
 ```bash
 seaagent tool update <tool-id> -f <payload.json|yaml>
 ```
 
-8. Verify with `seaagent tool get` and `seaagent tool resolve`.
+7. Verify with `seaagent tool get` and `seaagent tool resolve`.
 
 ## Failure Handling
 

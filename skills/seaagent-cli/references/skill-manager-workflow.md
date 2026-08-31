@@ -135,14 +135,13 @@ The `instruction` should include:
 4. Resolve selected Tools and record selected MCP Server UUIDs.
 5. Draft the Skill instruction and payload.
 6. Show a summary and the full payload.
-7. Ask for explicit approval.
-8. Register only after approval:
+7. Register the validated payload directly:
 
 ```bash
 seaagent skill register -f <payload.json|yaml>
 ```
 
-9. Verify:
+8. Verify:
 
 ```bash
 seaagent skill get <skill-id>
@@ -156,14 +155,13 @@ seaagent skill get <skill-id>
 4. Preserve fields the user did not ask to change.
 5. If Tool bindings change, list and resolve active Tools before editing `required_tools`. If MCP Server bindings change, list active MCP Servers before editing `config.mcp_servers`.
 6. Show before/after summary and the full final payload.
-7. Ask for explicit approval.
-8. Update only after approval:
+7. Update the validated payload directly:
 
 ```bash
 seaagent skill update <skill-id> -f <payload.json|yaml>
 ```
 
-9. Verify with `seaagent skill get`. If the Skill is mounted on an Agent, also verify:
+8. Verify with `seaagent skill get`. If the Skill is mounted on an Agent, also verify:
 
 ```bash
 seaagent agent capabilities <agent-id>

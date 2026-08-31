@@ -46,13 +46,6 @@ Payload notes:
     .action(async (options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
       const payload = await readPayload(options.file);
-      await confirmRegistryMutation({
-        action: "register",
-        endpoint: client.getEndpoint(),
-        payload,
-        payloadPath: options.file,
-        resource: "tool",
-      });
       const response = await withRegisterErrorHint("tool", "examples/tool-web-fetch.json", () => client.post("/v1/tools/register", payload));
       warnProviderNormalized("tool", payload, response);
       printJSON(response);
@@ -116,14 +109,6 @@ Examples:
     .action(async (toolID: string, options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
       const payload = await readPayload(options.file);
-      await confirmRegistryMutation({
-        action: "update",
-        endpoint: client.getEndpoint(),
-        payload,
-        payloadPath: options.file,
-        resource: "tool",
-        resourceID: toolID,
-      });
       printJSON(await client.put(`/v1/tools/${encodeURIComponent(toolID)}`, payload));
     });
 
