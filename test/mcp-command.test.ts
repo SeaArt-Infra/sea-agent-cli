@@ -80,7 +80,7 @@ test("MCP commands use management routes and preserve payload files", async (t) 
     { method: "GET", path: "/agent-v2/v1/mcps/mcp-1/tools", query: "", body: undefined },
     { method: "POST", path: "/agent-v2/v1/mcps/mcp-1/call", query: "", body: callPayload },
   ]);
-  assert.deepEqual(confirmations, ["register", "update", "delete", "call"]);
+  assert.deepEqual(confirmations, ["delete", "call"]);
 });
 
 async function run(command: ReturnType<typeof mcpCommand>, args: string[]): Promise<void> {

@@ -70,13 +70,6 @@ Minimal payload:
     .action(async (options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
       const payload = await readPayload(options.file);
-      await confirmRegistryMutation({
-        action: "register",
-        endpoint: client.getEndpoint(),
-        payload,
-        payloadPath: options.file,
-        resource: "agent",
-      });
       printJSON(await withRegisterErrorHint("agent", "examples/agent-web.json", () => client.post("/v1/agents/register", payload)));
     });
 
@@ -110,14 +103,6 @@ saved fields, read the current Agent, and preserve its other configuration.`)
             reasoningEffort: options.reasoningEffort,
             maxOutputTokens: options.maxOutputTokens,
           });
-      await confirmRegistryMutation({
-        action: "update",
-        endpoint: client.getEndpoint(),
-        payload,
-        payloadPath: options.file,
-        resource: "agent",
-        resourceID: agentID,
-      });
       printJSON(await client.put(`/v1/agents/${encodeURIComponent(agentID)}`, payload));
     });
 

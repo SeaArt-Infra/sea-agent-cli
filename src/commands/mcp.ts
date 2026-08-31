@@ -49,13 +49,6 @@ unless sharing is intended. Do not put a server URL in a Skill payload.`)
     .action(async (options: { file: string }) => {
       const client = await createClient();
       const payload = await readPayload(options.file);
-      await confirmMutation({
-        action: "register",
-        endpoint: client.getEndpoint(),
-        payload,
-        payloadPath: options.file,
-        resource: "mcp",
-      });
       const response = await withRegisterErrorHint("mcp server", "examples/mcp-streamable-http.json", () => client.post("/v1/mcps/register", payload));
       warnProviderNormalized("mcp server", payload, response);
       printJSON(response);
@@ -114,14 +107,6 @@ Example:
     .action(async (mcpID: string, options: { file: string }) => {
       const client = await createClient();
       const payload = await readPayload(options.file);
-      await confirmMutation({
-        action: "update",
-        endpoint: client.getEndpoint(),
-        payload,
-        payloadPath: options.file,
-        resource: "mcp",
-        resourceID: mcpID,
-      });
       printJSON(await client.put(`/v1/mcps/${encodeURIComponent(mcpID)}`, payload));
     });
 

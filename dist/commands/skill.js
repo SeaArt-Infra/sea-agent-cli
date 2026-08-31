@@ -38,13 +38,6 @@ Payload notes:
         .action(async (options) => {
         const client = await AgentGatewayClient.fromConfig();
         const payload = await readPayload(options.file);
-        await confirmRegistryMutation({
-            action: "register",
-            endpoint: client.getEndpoint(),
-            payload,
-            payloadPath: options.file,
-            resource: "skill",
-        });
         const response = await withRegisterErrorHint("skill", "examples/skill-web.json", () => client.post("/v1/skills/register", payload));
         warnProviderNormalized("skill", payload, response);
         printJSON(response);
@@ -62,13 +55,6 @@ This is a convenience alias for 'seaagent tool register'.`)
         .action(async (options) => {
         const client = await AgentGatewayClient.fromConfig();
         const payload = await readPayload(options.file);
-        await confirmRegistryMutation({
-            action: "register",
-            endpoint: client.getEndpoint(),
-            payload,
-            payloadPath: options.file,
-            resource: "tool",
-        });
         const response = await withRegisterErrorHint("tool", "examples/tool-web-fetch.json", () => client.post("/v1/tools/register", payload));
         warnProviderNormalized("tool", payload, response);
         printJSON(response);
@@ -115,14 +101,6 @@ Example:
         .action(async (skillID, options) => {
         const client = await AgentGatewayClient.fromConfig();
         const payload = await readPayload(options.file);
-        await confirmRegistryMutation({
-            action: "update",
-            endpoint: client.getEndpoint(),
-            payload,
-            payloadPath: options.file,
-            resource: "skill",
-            resourceID: skillID,
-        });
         printJSON(await client.put(`/v1/skills/${encodeURIComponent(skillID)}`, payload));
     });
     cmd

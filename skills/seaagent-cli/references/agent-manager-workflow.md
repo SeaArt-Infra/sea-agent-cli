@@ -122,21 +122,20 @@ The `system_prompt` should include:
 3. List active Skills and choose the smallest sufficient set.
 4. Draft `system_prompt` and the Agent payload.
 5. Show a summary and the full payload.
-6. Ask for explicit approval.
-7. Register only after approval:
+6. Register the validated payload directly:
 
 ```bash
 seaagent agent register -f <payload.json|yaml>
 ```
 
-8. Verify:
+7. Verify:
 
 ```bash
 seaagent agent get <agent-id>
 seaagent agent capabilities <agent-id>
 ```
 
-9. Run a no-tool smoke test before expensive workflows:
+8. Run a no-tool smoke test before expensive workflows:
 
 ```bash
 seaagent chat run --no-stream <agent-id> "In one sentence, explain what you can do without calling any tools."
@@ -155,14 +154,13 @@ tool-free so it cannot trigger an external operation.
 5. If Skill bindings change, list active Skills and use only visible active Skill ids.
 6. Build the full low-level Agent update payload. `agent update` does not accept partial patch semantics.
 7. Show before/after summary and the full final payload.
-8. Ask for explicit approval.
-9. Update only after approval:
+8. Update the validated payload directly:
 
 ```bash
 seaagent agent update <agent-id> -f <payload.json|yaml>
 ```
 
-10. Verify with `agent get`, `agent capabilities`, and a no-tool smoke test when runnable.
+9. Verify with `agent get`, `agent capabilities`, and a no-tool smoke test when runnable.
 
 ## Failure Handling
 
