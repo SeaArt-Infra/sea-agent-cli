@@ -8,6 +8,7 @@ export function chatCommand() {
     const cmd = addHelpText(new Command("chat").description("Run and manage chats"), `
 Chat can run against a registered agent UUID or an inline runtime agent_config file.
 Streaming is enabled by default. Use --no-stream when another agent needs raw JSON.
+Inline agent configs must set category under agent: fabric, seaactor, adk, or dsh.
 
 Examples:
   seaagent chat run <agent-id> "hello"
@@ -50,6 +51,7 @@ Examples:
 
 Notes:
   - Either [agent-id] or --agent-config-file is required.
+  - An inline agent_config must set category at its top level or under agent; use fabric, seaactor, adk, or dsh.
   - --skill-id can be repeated and sends skill_ids with agent_id for one-off extra Skills; IDs must be active visible UUIDs, capped at 20, and cannot be used with --agent-config-file or payload agent_config.
   - --messages-file accepts a messages array, or an object containing a full ChatCompletionRequest payload.
   - --reasoning-effort applies only to this chat request and does not change the saved Agent configuration.

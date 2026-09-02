@@ -214,7 +214,7 @@ Skill notes:
 
 Agent notes:
 
-- `category` must be `fabric`, `seaactor`, or `adk`; it selects the corresponding scheduler pool.
+- `category` must be `fabric`, `seaactor`, `adk`, or `dsh`; it selects the corresponding scheduler pool.
 - Do not send `agent_key` for new registrations; the gateway returns an immutable UUID.
 - Use `agent capabilities <agent-id>` after agent or skill changes to verify resolved bindings.
 
@@ -294,7 +294,7 @@ Send a messages array or full chat payload file:
 seaagent chat run --messages-file examples/chat-multimodal.json <agent-id>
 ```
 
-Object payload files can include any `ChatCompletionRequest` fields, such as `agent_id`, `skill_ids`, `model`, `reasoning_effort`, `stream`, and `metadata.session_id` / `metadata.user_id`. Positional `<agent-id>`, `--skill-id`, `--model`, `--reasoning-effort`, and `--agent-config-file` override the same fields from the file. `skill_ids` temporarily mounts extra active, visible Skills for a registered Agent run, is capped at 20 UUIDs, merges after the Agent's own Skills, and cannot be used with `agent_config`.
+Object payload files can include any `ChatCompletionRequest` fields, such as `agent_id`, `skill_ids`, `category`, `model`, `reasoning_effort`, `stream`, and `metadata.session_id` / `metadata.user_id`. Positional `<agent-id>`, `--skill-id`, `--model`, `--reasoning-effort`, and `--agent-config-file` override the same fields from the file. `skill_ids` temporarily mounts extra active, visible Skills for a registered Agent run, is capped at 20 UUIDs, merges after the Agent's own Skills, and cannot be used with `agent_config`. Inline `agent_config` must set `category` to `fabric`, `seaactor`, `adk`, or `dsh`.
 
 Inspect and replay existing chats:
 
