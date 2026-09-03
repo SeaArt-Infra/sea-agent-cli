@@ -71,13 +71,6 @@ Minimal payload:
     .action(async (options: { file: string }) => {
       const client = await AgentGatewayClient.fromConfig();
       const payload = await readPayload(options.file);
-      await confirmRegistryMutation({
-        action: "register",
-        endpoint: client.getEndpoint(),
-        payload,
-        payloadPath: options.file,
-        resource: "agent",
-      });
       printJSON(await withRegisterErrorHint("agent", "examples/agent-web.json", () => client.post("/v1/agents/register", payload)));
     });
 
@@ -107,14 +100,6 @@ preserves its other configuration.`)
       const payload = options.reasoningEffort
         ? updatePayloadWithReasoningEffort(await client.get(`/v1/agents/${encodeURIComponent(agentID)}`), options.reasoningEffort)
         : await readPayload(options.file!);
-      await confirmRegistryMutation({
-        action: "update",
-        endpoint: client.getEndpoint(),
-        payload,
-        payloadPath: options.file,
-        resource: "agent",
-        resourceID: agentID,
-      });
       printJSON(await client.put(`/v1/agents/${encodeURIComponent(agentID)}`, payload));
     });
 
