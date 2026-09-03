@@ -1,7 +1,7 @@
 ---
 name: seaagent-cli
 description: "Use this skill when working with the local seaagent CLI for SeaArt agent-gateway: configuring endpoints and API keys, registering/updating/deleting Tools, MCP Servers, Skills, and Agents, listing catalog entries, resolving runtime configs, and running or inspecting chats."
-version: "2026.07.30"
+version: "2026.09.03"
 ---
 
 # Seaagent CLI
@@ -64,8 +64,8 @@ assembling payloads:
 - [Agent Manager Workflow](references/agent-manager-workflow.md): create or update Agents by selecting active Skills, writing `system_prompt`, and preserving runtime config.
 
 If a request spans multiple resource types, work bottom-up: Tool first, then
-Skill, then Agent. Do not register or update any resource until the final
-payload for that resource has been shown to the user and explicitly approved.
+Skill, then Agent. Validate the final payload for each resource before invoking
+its register or update command; these CLI commands execute directly.
 
 Use the repo examples as starting points:
 
@@ -169,8 +169,9 @@ Do not represent an MCP Server UUID in `required_tools`, and do not accept a
 raw MCP URL. Gateway resolves the registered Server URL after checking active
 status and visibility. The endpoint must be unauthenticated Streamable HTTP;
 the Server `public` field controls cross-production-line sharing, so leave it
-false unless sharing is intended. `mcp register`, `mcp update`, `mcp delete`,
-and `mcp call` require explicit confirmation.
+false unless sharing is intended. `mcp register` and `mcp update` execute
+directly. `mcp delete` and `mcp call` require explicit confirmation because
+they can be destructive or have external side effects.
 
 Skills:
 
@@ -291,38 +292,33 @@ seaagent sandbox delete <sandbox-run-id>
 
 ## Registry Mutation Workflow
 
-Registry mutations are gated operations. Before running any `agent`, `skill`,
-or `tool` register/update command, ask the user for explicit approval and wait
-for a clear affirmative response. This applies to:
+Tool, Skill, Agent, and MCP register/update commands execute directly after
+their payloads are validated. Registry deletion and external-effect operations
+remain gated and require explicit approval:
 
-- `seaagent agent register`
-- `seaagent agent update`
 - `seaagent agent delete`
-- `seaagent skill register`
-- `seaagent skill update`
 - `seaagent skill delete`
-- `seaagent skill tool-register`
-- `seaagent tool register`
-- `seaagent tool update`
 - `seaagent tool delete`
+- `seaagent mcp delete`
+- `seaagent mcp call`
+- destructive Agent memory/fact commands
 
-Show the intended endpoint, operation, resource type, resource UUID when
-available, and payload file path or concise payload summary before asking.
-Do not infer approval from the user's original task description.
+For a gated operation, show the intended endpoint, operation, resource type,
+resource UUID when available, and payload file path or concise payload summary
+before asking.
 Do not use CLI flags, environment variables, or non-interactive scripts to
 bypass this approval step. On macOS, the CLI uses a desktop confirmation dialog
-for registry mutations; wait for the user to approve that dialog before
+for gated operations; wait for the user to approve that dialog before
 continuing.
 
 For gateway mutations, use this order:
 
 1. Confirm `seaagent config get` points at the intended endpoint.
 2. Check for an existing agent/skill with `list --search`.
-3. Ask for explicit approval before each register/update mutation.
-4. Register or update the required skill first, then register or update the agent.
-5. Verify with `seaagent agent capabilities <agent-id>`.
+3. Register or update the required skill first, then register or update the agent.
+4. Verify with `seaagent agent capabilities <agent-id>`.
    Use `seaagent agent get <agent-id>` when you need raw `model_config`, `system_prompt`, or stored `agent_config`.
-6. Run a lightweight smoke test before invoking expensive tools:
+5. Run a lightweight smoke test before invoking expensive tools:
    ```bash
    seaagent chat run --no-stream <agent-id> "In one sentence, explain what you can do without calling any tools."
    ```
