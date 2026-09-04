@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { Command } from "commander";
+import { readFileSync } from "node:fs";
 import { agentCommand } from "./commands/agent.js";
 import { catalogCommand } from "./commands/catalog.js";
 import { chatCommand } from "./commands/chat.js";
@@ -14,11 +15,12 @@ import { toolCommand } from "./commands/tool.js";
 import { maybeNotifyCliUpdate } from "./lib/cli-update.js";
 import { addHelpText } from "./lib/help.js";
 import { maybeNotifySkillUpdate } from "./lib/self-update.js";
+const packageJSON = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 const program = new Command();
 program
     .name("seaagent")
     .description("CLI for agent-gateway registration, discovery, chat, hooks, and sandbox runs")
-    .version("0.1.0")
+    .version(packageJSON.version ?? "0.0.0")
     .showHelpAfterError()
     .showSuggestionAfterError()
     .addCommand(selfCommand())
