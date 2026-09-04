@@ -276,6 +276,7 @@ Run a registered agent:
 ```bash
 seaagent chat run <agent-id> "Search recent AI news"
 seaagent chat run --model gpt-5.5 --reasoning-effort high <agent-id> "Compare this model"
+seaagent chat run --user-id user-123 --session-id session-123 <agent-id> "Continue this conversation"
 seaagent chat run --session-id session-123 <agent-id> "Continue this conversation"
 seaagent chat run --ws <agent-id> "Stream over WebSocket"
 seaagent chat run --stream-retries 5 <agent-id> "Limit reconnect attempts"
@@ -295,7 +296,7 @@ Send a messages array or full chat payload file:
 seaagent chat run --messages-file examples/chat-multimodal.json <agent-id>
 ```
 
-Object payload files can include any `ChatCompletionRequest` fields, including top-level `user_id` and `session_id`; `metadata.user_id` and `metadata.session_id` remain fallbacks. Positional `<agent-id>`, `--skill-id`, `--model`, `--reasoning-effort`, `--session-id`, and `--agent-config-file` override the same fields from the file. `skill_ids` temporarily mounts extra active, visible Skills for a registered Agent run, is capped at 20 UUIDs, merges after the Agent's own Skills, and cannot be used with `agent_config`. Inline `agent_config` must set `category` to `fabric`, `seaactor`, `adk`, or `dsh`.
+Object payload files can include any `ChatCompletionRequest` fields, including top-level `user_id` and `session_id`; `metadata.user_id` and `metadata.session_id` remain fallbacks. Positional `<agent-id>`, `--skill-id`, `--model`, `--reasoning-effort`, `--user-id`, `--session-id`, and `--agent-config-file` override the same fields from the file. Use `--user-id` together with `--session-id` for a persistent session; it is distinct from config `user-id`, which is sent as `X-User-ID` for the production-line tenant. `skill_ids` temporarily mounts extra active, visible Skills for a registered Agent run, is capped at 20 UUIDs, merges after the Agent's own Skills, and cannot be used with `agent_config`. Inline `agent_config` must set `category` to `fabric`, `seaactor`, `adk`, or `dsh`.
 
 Inspect and replay existing chats:
 

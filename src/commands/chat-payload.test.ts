@@ -69,12 +69,13 @@ test("chatPayloadFromCommand lets the command-line reasoning effort override a p
   assert.equal(payload.reasoning_effort, "medium");
 });
 
-test("chatPayloadFromCommand sends a top-level session ID and overrides a payload file", async (t) => {
+test("chatPayloadFromCommand sends top-level user and session IDs and overrides a payload file", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "seaagent-chat-test-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const payloadPath = join(directory, "chat.json");
   await writeFile(payloadPath, JSON.stringify({
     agent_id: "agent-from-file",
+    user_id: "user-from-file",
     session_id: "session-from-file",
     messages: [{ role: "user", content: "hello" }],
   }));
@@ -84,6 +85,7 @@ test("chatPayloadFromCommand sends a top-level session ID and overrides a payloa
     undefined,
     {
       messagesFile: payloadPath,
+      userId: " user-from-command ",
       sessionId: " session-from-command ",
       stream: true,
       streamRetries: "-1",
@@ -92,5 +94,6 @@ test("chatPayloadFromCommand sends a top-level session ID and overrides a payloa
   );
 
   assert.equal(payload.agent_id, "agent-from-command");
+  assert.equal(payload.user_id, "user-from-command");
   assert.equal(payload.session_id, "session-from-command");
 });
