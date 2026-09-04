@@ -235,7 +235,7 @@ For a persistent session with a complete scope, `medium_term.recall` and `medium
 - `recall`: retrieve relevant semantic medium-term memory and inject it as background context for a later persistent run.
 - `learn`: enqueue a qualifying completed persistent run for medium-term memory extraction; it does not write a memory synchronously in the chat request.
 
-An ephemeral run (no `metadata.session_id`) defaults both fields to `false`. A persistent run also needs its terminal `metadata.user_id`; a missing scope identity, user memory opt-out, or Worker `MEMORY_MEDIUM_TERM_ENABLED=false` forces both fields off. The Agent policy and a top-level chat-request `memory_policy` can further turn a field off, but cannot reopen a higher-level closure. Long-term recall and writes remain disabled by default.
+An ephemeral run (no top-level `session_id`, falling back to `metadata.session_id`) defaults both fields to `false`. A persistent run also needs its terminal top-level `user_id` (falling back to `metadata.user_id`); a missing scope identity, user memory opt-out, or Worker `MEMORY_MEDIUM_TERM_ENABLED=false` forces both fields off. The Agent policy and a top-level chat-request `memory_policy` can further turn a field off, but cannot reopen a higher-level closure. Long-term recall and writes remain disabled by default.
 
 Use this fragment to explicitly disable medium-term memory for one stored Agent:
 
@@ -276,6 +276,7 @@ Run a registered agent:
 ```bash
 seaagent chat run <agent-id> "Search recent AI news"
 seaagent chat run --model gpt-5.5 --reasoning-effort high <agent-id> "Compare this model"
+seaagent chat run --session-id session-123 <agent-id> "Continue this conversation"
 seaagent chat run --ws <agent-id> "Stream over WebSocket"
 seaagent chat run --stream-retries 5 <agent-id> "Limit reconnect attempts"
 seaagent chat run --no-stream <agent-id> "Return raw JSON"
@@ -294,7 +295,7 @@ Send a messages array or full chat payload file:
 seaagent chat run --messages-file examples/chat-multimodal.json <agent-id>
 ```
 
-Object payload files can include any `ChatCompletionRequest` fields, such as `agent_id`, `skill_ids`, `category`, `model`, `reasoning_effort`, `stream`, and `metadata.session_id` / `metadata.user_id`. Positional `<agent-id>`, `--skill-id`, `--model`, `--reasoning-effort`, and `--agent-config-file` override the same fields from the file. `skill_ids` temporarily mounts extra active, visible Skills for a registered Agent run, is capped at 20 UUIDs, merges after the Agent's own Skills, and cannot be used with `agent_config`. Inline `agent_config` must set `category` to `fabric`, `seaactor`, `adk`, or `dsh`.
+Object payload files can include any `ChatCompletionRequest` fields, including top-level `user_id` and `session_id`; `metadata.user_id` and `metadata.session_id` remain fallbacks. Positional `<agent-id>`, `--skill-id`, `--model`, `--reasoning-effort`, `--session-id`, and `--agent-config-file` override the same fields from the file. `skill_ids` temporarily mounts extra active, visible Skills for a registered Agent run, is capped at 20 UUIDs, merges after the Agent's own Skills, and cannot be used with `agent_config`. Inline `agent_config` must set `category` to `fabric`, `seaactor`, `adk`, or `dsh`.
 
 Inspect and replay existing chats:
 
