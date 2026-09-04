@@ -14,6 +14,7 @@ Examples:
   seaagent chat run <agent-id> "hello"
   seaagent chat run --model gpt-5.1-chat <agent-id> "test another model"
   seaagent chat run --reasoning-effort high <agent-id> "think carefully"
+  seaagent chat run --user-id user-123 --session-id session-123 <agent-id> "continue this conversation"
   seaagent chat run --session-id session-123 <agent-id> "continue this conversation"
   seaagent chat run --no-stream <agent-id> "return JSON"
   seaagent chat run --ws <agent-id> "stream over WebSocket"
@@ -30,6 +31,7 @@ Examples:
         .argument("[message...]", "user message text")
         .option("-f, --agent-config-file <path>", "JSON/YAML runtime agent_config file")
         .option("--messages-file <path>", "JSON/YAML messages array or full chat payload file")
+        .option("--user-id <id>", "top-level terminal user ID for this chat")
         .option("--session-id <id>", "top-level persistent session ID for this chat")
         .option("--skill-id <id>", "temporary Skill UUID to mount for this chat; repeat for multiple Skills", collectSkillIDOption, [])
         .option("--model <model>", "override the agent model for this chat run")
@@ -44,6 +46,7 @@ Examples:
   seaagent chat run <agent-id> "Search recent AI news"
   seaagent chat run --model gpt-5.1-chat <agent-id> "Compare this model"
   seaagent chat run --reasoning-effort high <agent-id> "Compare this model"
+  seaagent chat run --user-id user-123 --session-id session-123 <agent-id> "Continue this conversation"
   seaagent chat run --session-id session-123 <agent-id> "Continue this conversation"
   seaagent chat run --no-stream <agent-id> "Use one sentence"
   seaagent chat run --ws <agent-id> "Stream with WebSocket"
@@ -56,6 +59,7 @@ Notes:
   - Either [agent-id] or --agent-config-file is required.
   - An inline agent_config must set category at its top level or under agent; use fabric, seaactor, adk, or dsh.
   - --skill-id can be repeated and sends skill_ids with agent_id for one-off extra Skills; IDs must be active visible UUIDs, capped at 20, and cannot be used with --agent-config-file or payload agent_config.
+  - --user-id sends the top-level terminal user_id. Use it together with --session-id for a persistent session; this is distinct from config user-id, which is sent as X-User-ID for the production-line tenant.
   - --session-id sends the top-level session_id and overrides session_id from a --messages-file payload.
   - --messages-file accepts a messages array, or an object containing a full ChatCompletionRequest payload.
   - --reasoning-effort applies only to this chat request and does not change the saved Agent configuration.
@@ -141,6 +145,9 @@ export async function chatPayloadFromCommand(agentID, messageParts, options, str
     }
     if (options.reasoningEffort?.trim()) {
         payload.reasoning_effort = normalizeReasoningEffort(options.reasoningEffort);
+    }
+    if (options.userId?.trim()) {
+        payload.user_id = options.userId.trim();
     }
     if (options.sessionId?.trim()) {
         payload.session_id = options.sessionId.trim();
