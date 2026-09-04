@@ -251,6 +251,7 @@ Chat:
 ```bash
 seaagent chat run <agent-id> "<message>"
 seaagent chat run --model <model> --reasoning-effort <effort> <agent-id> "<message>"
+seaagent chat run --session-id <session-id> <agent-id> "<message>"
 seaagent chat run --ws <agent-id> "<message>"
 seaagent chat run --stream-retries 5 <agent-id> "<message with limited reconnects>"
 seaagent chat run --agent-config-file <runtime-config.json|yaml> "<message>"
@@ -265,7 +266,9 @@ seaagent chat cancel <chat-id>
 
 `--reasoning-effort` temporarily sends the platform unified `reasoning_effort` value without changing the saved Agent default. Supported values are `off`, `on`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, and `ultra`; it can be combined with `--model` for one chat run.
 
-`--messages-file` accepts a JSON/YAML messages array, or an object containing a full `ChatCompletionRequest` payload. Object payloads may include fields such as `agent_id`, `skill_ids`, `category`, `model`, `reasoning_effort`, `stream`, and `metadata.session_id` / `metadata.user_id`; positional `<agent-id>`, `--skill-id`, `--model`, `--reasoning-effort`, and `--agent-config-file` override the same fields from the file. `skill_ids` temporarily mounts extra Skills for an `agent_id` run when the Agent needs one-off capabilities without changing its saved config; IDs must be active, visible Skill UUIDs, are capped at 20, are merged after the Agent's own Skills, and cannot be used with `agent_config` / `--agent-config-file`. Skill runtime config only fills Agent defaults that are unset. SDK field names for the same option are Go `SkillIDs`, JS `skillIds`, and Python `skill_ids`. Use it for OpenAI-style multimodal content parts such as text plus `image_url` / `video_url`. An inline `agent_config` must set `category` to `fabric`, `seaactor`, `adk`, or `dsh`.
+`--session-id` sends a top-level `session_id` for a persistent conversation. It overrides `session_id` from a full `--messages-file` payload.
+
+`--messages-file` accepts a JSON/YAML messages array, or an object containing a full `ChatCompletionRequest` payload. Object payloads may include top-level `user_id` and `session_id`; `metadata.user_id` and `metadata.session_id` remain compatibility fallbacks. Positional `<agent-id>`, `--skill-id`, `--model`, `--reasoning-effort`, `--session-id`, and `--agent-config-file` override the same fields from the file. `skill_ids` temporarily mounts extra Skills for an `agent_id` run when the Agent needs one-off capabilities without changing its saved config; IDs must be active, visible Skill UUIDs, are capped at 20, are merged after the Agent's own Skills, and cannot be used with `agent_config` / `--agent-config-file`. Skill runtime config only fills Agent defaults that are unset. SDK field names for the same option are Go `SkillIDs`, JS `skillIds`, and Python `skill_ids`. Use it for OpenAI-style multimodal content parts such as text plus `image_url` / `video_url`. An inline `agent_config` must set `category` to `fabric`, `seaactor`, `adk`, or `dsh`.
 
 Streaming chat renders assistant text to stdout. It prints the chat `run_id` to stderr when known, and prints terminal `usage` plus `langfuse_trace_id` to stderr when the final event includes that metadata.
 
