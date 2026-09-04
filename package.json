@@ -1,6 +1,6 @@
 {
   "name": "@seaart/sea-agent-cli",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "CLI for agent-gateway registration and chat workflows.",
   "type": "module",
   "bin": {
