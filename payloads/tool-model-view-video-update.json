@@ -1,0 +1,61 @@
+{
+  "provider": "SeaInfra",
+  "name": "model_view_video",
+  "runtime_type": "builtin",
+  "openai_schema": {
+    "type": "function",
+    "function": {
+      "description": "Describe a short video with a dedicated omni-modal model and return a factual text description. The video URL is sent to the model, which watches the video itself; no local frame extraction happens and the result is text only. Use this when the primary agent needs a text description of a video. Use view_video instead when the primary model can inspect image frames directly, and model_view_image for still images. Audio is handled by the omni model when it can perceive it.",
+      "parameters": {
+        "type": "object",
+        "required": ["url"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "HTTP/HTTPS URL of a short video."
+          },
+          "focus": {
+            "type": "string",
+            "description": "Optional aspect to prioritize, such as visible text, product placement, or motion. Omit when the user asks for a general description."
+          },
+          "model": {
+            "type": "string",
+            "description": "Optional model override. Do not set unless the user explicitly names a model; omit to use the default.",
+            "enum": ["qwen3.5-omni-flash", "qwen3.5-omni-plus"]
+          },
+          "system_prompt": {
+            "type": "string",
+            "description": "Optional analysis prompt that replaces the built-in default. Do not set unless the user explicitly provides an analysis prompt. Never copy end-user content into this field."
+          },
+          "extra_params": {
+            "type": "object",
+            "description": "Optional sampling overrides. Omit unless the user explicitly asks for a different sampling rate or frame budget.",
+            "properties": {
+              "fps": {"type": "number", "minimum": 0.1, "maximum": 10, "default": 2, "description": "Frames sampled per second of video."},
+              "min_frames": {"type": "integer", "minimum": 1, "maximum": 2048, "default": 6, "description": "Minimum number of frames to sample. Defaults to 6 when omitted."},
+              "max_frames": {"type": "integer", "minimum": 1, "maximum": 2048, "default": 90, "description": "Maximum number of frames to sample. Defaults to 90 when omitted."},
+              "min_pixels": {"type": "integer", "minimum": 1, "description": "Minimum pixels per sampled frame."},
+              "max_pixels": {"type": "integer", "minimum": 1, "description": "Maximum pixels per sampled frame."},
+              "total_pixels": {"type": "integer", "minimum": 1, "description": "Total pixel budget across all sampled frames."},
+              "temperature": {"type": "number", "minimum": 0, "maximum": 2, "description": "Sampling temperature."},
+              "top_p": {"type": "number", "exclusiveMinimum": 0, "maximum": 1, "description": "Nucleus sampling probability."},
+              "presence_penalty": {"type": "number", "minimum": -2, "maximum": 2, "description": "Penalty for repeating content."},
+              "seed": {"type": "integer", "minimum": 0, "maximum": 2147483647, "description": "Deterministic sampling seed."},
+              "max_tokens": {"type": "integer", "minimum": 1, "description": "Maximum output tokens for the visible answer."},
+              "max_completion_tokens": {"type": "integer", "minimum": 1, "description": "Maximum output tokens including reasoning."},
+              "enable_thinking": {"type": "boolean", "description": "Enable the model's thinking mode."},
+              "thinking_budget": {"type": "integer", "minimum": 1, "description": "Thinking token budget."},
+              "enable_search": {"type": "boolean", "description": "Enable web search for this call."}
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "config": {},
+  "enabled": true,
+  "public": true,
+  "timeout_ms": 300000
+}

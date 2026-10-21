@@ -1,0 +1,38 @@
+{
+  "provider": "SeaInfra",
+  "name": "model_view_video",
+  "runtime_type": "builtin",
+  "description": "Describe a short video with a dedicated omni-modal model and return a factual text description. The video URL is sent to the model, which watches the video itself; no local frame extraction happens and the result is text only. Use this when the primary agent needs a video description rather than raw frames.",
+  "parameters": {
+    "type": "object",
+    "required": ["url"],
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "HTTP/HTTPS URL of a short video."
+      },
+      "focus": {
+        "type": "string",
+        "description": "Optional aspect to prioritize, such as visible text, product placement, or motion."
+      },
+      "model": {
+        "type": "string",
+        "description": "Optional model override. Defaults to qwen3.5-omni-flash or the worker's MODEL_VIEW_VIDEO_MODEL setting."
+      },
+      "system_prompt": {
+        "type": "string",
+        "description": "Optional system prompt that replaces the built-in default analysis prompt."
+      },
+      "extra_params": {
+        "type": "object",
+        "description": "Optional extra request fields. Sampling fields such as fps, min_frames, max_frames, min_pixels, max_pixels and total_pixels are attached to the video content part; every other key is merged into the request body. The frame budget defaults to min_frames=6 and max_frames=90.",
+        "additionalProperties": true
+      }
+    },
+    "additionalProperties": false
+  },
+  "config": {},
+  "enabled": true,
+  "public": true,
+  "timeout_ms": 300000
+}
